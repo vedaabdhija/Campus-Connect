@@ -4,26 +4,37 @@ import time, sqlite3, os, hashlib, secrets, datetime, random, string
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import io, base64, json, re, urllib.request
+import io, base64, json, re
 
 app = Flask(__name__)
-CORS(app, origins="*", allow_headers=["Content-Type","X-Token","Authorization"], methods=["GET","POST","PUT","DELETE","OPTIONS"], supports_credentials=False)
-@app.after_request
-def add_headers(r):
-    r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    # Allow file:// origin explicitly
-    if request.headers.get("Origin") == "null" or not request.headers.get("Origin"):
-        r.headers["Access-Control-Allow-Origin"] = "*"
-    return r
-
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
 
 DB_FILE   = "database.db"
 NOTES_DIR = "notes_files"          # files stored on disk, not in DB
 os.makedirs(NOTES_DIR, exist_ok=True)
 
 # ── NO-CACHE HEADERS ─────────────────────────────────────
+@app.after_request
+def after_request(r):
+    # CORS — explicitly allow file:// (origin: null) and any other origin
+    r.headers["Access-Control-Allow-Origin"]  = "*"
+    r.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Token, Authorization"
+    r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    # No cache
+    r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    r.headers["Pragma"]  = "no-cache"
+    r.headers["Expires"] = "0"
+    return r
 
-
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>", methods=["OPTIONS"])
+def options_handler(path):
+    from flask import Response as FR
+    resp = FR()
+    resp.headers["Access-Control-Allow-Origin"]  = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Token, Authorization"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    return resp, 200
 
 # ── PASSWORD HASHING (PBKDF2 – no external deps) ─────────
 def hash_pw(plain: str) -> str:
@@ -269,167 +280,6 @@ def _clean_tokens():
     expired = [k for k,v in list(_tokens.items()) if now > v["expires"]]
     for k in expired:
         _tokens.pop(k, None)
-
-
-# ══════════════════════════════════════════════════════════
-#  GEMINI AI HELPER
-# ══════════════════════════════════════════════════════════
-GEMINI_API_KEY = "AIzaSyBsvB0Ik2tz1foYdqmVmM_ckiphfYnDezU"
-GROQ_API_KEY       = "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"
-OPENROUTER_API_KEY = "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"
-
-def _call_openrouter(prompt: str, system: str = "") -> str:
-    """Call OpenRouter API — free models like Llama, Mistral, Gemma with no daily limits."""
-    print(f"[AI] Trying OpenRouter...", flush=True)
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-    payload = json.dumps({
-        "model": "meta-llama/llama-3.3-70b-instruct:free",
-        "messages": messages,
-        "max_tokens": 600,
-        "temperature": 0.7
-    }).encode()
-    req = urllib.request.Request(url, data=payload, headers={
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "http://127.0.0.1:5000",
-        "X-Title": "CampusConnect"
-    }, method="POST")
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        data = json.loads(resp.read())
-        # OpenRouter returns error in content for free models sometimes
-        result = data["choices"][0]["message"]["content"]
-        if not result or result.strip() == "":
-            raise Exception("Empty response from OpenRouter")
-        print(f"[AI] OpenRouter SUCCESS ✓", flush=True)
-        return result.strip()
-
-
-def _call_groq(prompt: str, system: str = "") -> str:
-    """Call Groq API (llama-3.3-70b). Raises on failure."""
-    print(f"[AI] Trying Groq...", flush=True)
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-    payload = json.dumps({
-        "model": "llama-3.3-70b-versatile",
-        "messages": messages,
-        "max_tokens": 600,
-        "temperature": 0.7
-    }).encode()
-    req = urllib.request.Request(url, data=payload, headers={
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {GROQ_API_KEY}"
-    }, method="POST")
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        data = json.loads(resp.read())
-        return data["choices"][0]["message"]["content"].strip()
-
-
-def _call_gemini(prompt: str, system: str = "") -> str:
-    """Call Gemini API. Raises on failure."""
-    models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
-    print(f"[AI] Trying Gemini models: {models}", flush=True)
-    full_prompt = (system + "\n\n" + prompt).strip() if system else prompt
-    last_err = None
-    for model in models:
-        try:
-            print(f"[AI] Gemini trying model: {model}", flush=True)
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
-            payload = json.dumps({
-                "contents": [{"parts": [{"text": full_prompt}]}],
-                "generationConfig": {"maxOutputTokens": 600, "temperature": 0.7}
-            }).encode()
-            req = urllib.request.Request(url, data=payload,
-                                         headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                data = json.loads(resp.read())
-                result = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                print(f"[AI] Gemini SUCCESS with {model} ✓", flush=True)
-                return result
-        except urllib.error.HTTPError as e:
-            print(f"[AI] Gemini {model} FAILED HTTP {e.code}", flush=True)
-            last_err = e
-            if e.code == 404:
-                continue
-            raise
-        except Exception as e:
-            print(f"[AI] Gemini {model} EXCEPTION: {str(e)[:80]}", flush=True)
-            last_err = e
-            continue
-    raise last_err or Exception("All Gemini models failed")
-
-
-def ask_gemini(prompt: str, system: str = "") -> str:
-    """Call AI — tries Groq first (faster, more generous free tier),
-    falls back to Gemini automatically if Groq fails or is rate-limited."""
-    errors = []
-
-    # ── 1. Try OpenRouter first (free, no daily limits) ─
-    if OPENROUTER_API_KEY:
-        try:
-            return _call_openrouter(prompt, system)
-        except urllib.error.HTTPError as e:
-            try:
-                body = json.loads(e.read().decode())
-                msg  = body.get("error", {}).get("message", str(e))
-            except Exception:
-                msg = str(e)
-            print(f"[AI] OpenRouter FAILED HTTP {e.code}: {msg[:200]}", flush=True)
-            errors.append(f"OpenRouter HTTP {e.code}: {msg}")
-        except Exception as e:
-            print(f"[AI] OpenRouter EXCEPTION: {str(e)[:120]}", flush=True)
-            errors.append(f"OpenRouter: {str(e)}")
-
-    # ── 2. Try Groq ───────────────────────────────────────
-    if GROQ_API_KEY:
-        try:
-            return _call_groq(prompt, system)
-        except urllib.error.HTTPError as e:
-            try:
-                body = json.loads(e.read().decode())
-                msg  = body.get("error", {}).get("message", str(e))
-            except Exception:
-                msg = str(e)
-            print(f"[AI] Groq FAILED HTTP {e.code}: {msg[:200]}", flush=True)
-            errors.append(f"Groq HTTP {e.code}: {msg}")
-        except Exception as e:
-            print(f"[AI] Groq EXCEPTION: {str(e)[:120]}", flush=True)
-            errors.append(f"Groq: {str(e)}")
-
-    # ── 3. Fall back to Gemini ───────────────────────────
-    if GEMINI_API_KEY:
-        print(f"[AI] Trying Gemini fallback...", flush=True)
-        try:
-            return _call_gemini(prompt, system)
-        except urllib.error.HTTPError as e:
-            try:
-                body = json.loads(e.read().decode())
-                msg  = body.get("error", {}).get("message", str(e))
-            except Exception:
-                msg = str(e)
-            if e.code == 429:
-                errors.append("Gemini: rate limit")
-            elif e.code in (401, 403):
-                errors.append("Gemini: invalid key")
-            else:
-                errors.append(f"Gemini HTTP {e.code}: {msg}")
-        except Exception as e:
-            errors.append(f"Gemini: {str(e)}")
-
-    # ── Both failed ──────────────────────────────────────
-    if not OPENROUTER_API_KEY and not GROQ_API_KEY and not GEMINI_API_KEY:
-        return "⚠️ No AI API key configured. Ask admin to add an OpenRouter, Groq or Gemini key."
-    if any("rate limit" in e for e in errors):
-        return "⏳ AI is temporarily busy (rate limit). Please try again in a moment."
-    if any("invalid key" in e for e in errors):
-        return "🔑 AI API key is invalid. Please ask admin to update it."
-    return f"AI unavailable right now. Please try again shortly."
 
 # ══════════════════════════════════════════════════════════
 #  AUTH ROUTES
@@ -1252,202 +1102,6 @@ def visualize_weekly(username):
     img = io.BytesIO(); plt.savefig(img, format="png", transparent=True); img.seek(0); plt.close()
     return Response(img, mimetype="image/png")
 
-
-# ══════════════════════════════════════════════════════════
-#  AI ENDPOINTS
-# ══════════════════════════════════════════════════════════
-
-
-@app.route("/ai/test")
-def ai_test():
-    """Simple test to confirm AI routes are loaded."""
-    return jsonify(status="AI routes active", key_set=bool(GEMINI_API_KEY), version="2.0")
-
-@app.route("/ai/chat", methods=["POST"])
-@require_role()
-def ai_chat():
-    """Student AI assistant — answers questions using their real attendance data."""
-    d  = request.json or {}
-    td = request.token_data
-    question = d.get("message", "").strip()
-    # Resolve username: token > body > args
-    username = td.get("username", "")
-    if not username or username == "guest":
-        username = d.get("username", "") or request.args.get("username", "")
-    if not username:
-        return jsonify(success=False, answer="Could not identify your account. Please log out and log back in.")
-    if not question:
-        return jsonify(success=False, answer="Please type a question.")
-
-
-    with get_db() as conn:
-        att_rows = conn.execute(
-            "SELECT subject, COUNT(*) as count FROM attendance WHERE student_username=? GROUP BY subject",
-            (username,)).fetchall()
-        attended = {r["subject"]: r["count"] for r in att_rows}
-        totals   = {r["subject"]: r["total_classes"]
-                    for r in conn.execute("SELECT * FROM subject_totals").fetchall()}
-        user     = conn.execute("SELECT full_name, section FROM users WHERE username=?",
-                                (username,)).fetchone()
-
-    # Build context
-    lines = []
-    total_att, total_pos = 0, 0
-    for subj, tot in totals.items():
-        att = attended.get(subj, 0)
-        pct = round(att / tot * 100) if tot else 0
-        total_att += att; total_pos += tot
-        lines.append(f"  {subj}: {att}/{tot} classes ({pct}%)")
-
-    overall = round(total_att / total_pos * 100) if total_pos else 0
-    context = f"""Student: {user['full_name'] if user else username} | Section: {user['section'] if user else ''} | Overall: {overall}%
-Subject-wise attendance:
-{chr(10).join(lines)}"""
-
-    system = """You are a helpful academic assistant for a college attendance system called CampusConnect.
-Answer the student's question using ONLY the attendance data provided.
-Be concise (2-4 sentences), friendly, and specific. Use numbers from the data.
-If asked how many classes they can miss: classes_can_miss = floor(total * 0.25) - classes_already_missed.
-If a subject is below 75%, flag it clearly. Never make up data not in the context."""
-
-    answer = ask_gemini(f"Context:\n{context}\n\nStudent question: {question}", system)
-    return jsonify(success=True, answer=answer)
-
-
-@app.route("/ai/progress-report/<username>", methods=["GET"])
-@require_role("faculty", "admin")
-def ai_progress_report(username):
-    """Generate AI written progress report for a student."""
-    with get_db() as conn:
-        att_rows = conn.execute(
-            "SELECT subject, COUNT(*) as count FROM attendance WHERE student_username=? GROUP BY subject",
-            (username,)).fetchall()
-        attended = {r["subject"]: r["count"] for r in att_rows}
-        totals   = {r["subject"]: r["total_classes"]
-                    for r in conn.execute("SELECT * FROM subject_totals").fetchall()}
-        user     = conn.execute("SELECT full_name, section FROM users WHERE username=?",
-                                (username,)).fetchone()
-
-    if not user:
-        return jsonify(success=False, msg="Student not found")
-
-    lines = []
-    total_att, total_pos = 0, 0
-    for subj, tot in totals.items():
-        att = attended.get(subj, 0)
-        pct = round(att / tot * 100) if tot else 0
-        total_att += att; total_pos += tot
-        lines.append(f"{subj}: {att}/{tot} ({pct}%)")
-
-    overall = round(total_att / total_pos * 100) if total_pos else 0
-
-    prompt = f"""Write a concise academic progress report for:
-Student: {user['full_name']} | ID: {username} | Section: {user['section']}
-Overall Attendance: {overall}% ({total_att}/{total_pos} classes)
-Subject-wise: {', '.join(lines)}
-
-Write 3-4 sentences. Mention strongest and weakest subjects by name with percentages.
-Flag any subject below 75%. End with a specific recommendation. Professional tone."""
-
-    report = ask_gemini(prompt)
-    return jsonify(success=True, report=report, student=user["full_name"], overall=overall)
-
-
-@app.route("/ai/atrisk", methods=["GET"])
-@require_role("faculty", "admin")
-def ai_atrisk():
-    """AI analyses ALL students and returns personalised at-risk alerts."""
-    td = request.token_data
-    with get_db() as conn:
-        totals   = {r["subject"]: r["total_classes"]
-                    for r in conn.execute("SELECT * FROM subject_totals").fetchall()}
-        students = conn.execute(
-            "SELECT username, full_name, section FROM users WHERE role='student' ORDER BY CAST(username AS INTEGER)"
-        ).fetchall()
-
-        at_risk = []
-        for s in students:
-            att_rows = conn.execute(
-                "SELECT subject, COUNT(*) as c FROM attendance WHERE student_username=? GROUP BY subject",
-                (s["username"],)).fetchall()
-            attended = {r["subject"]: r["c"] for r in att_rows}
-            total_att = sum(attended.get(subj, 0) for subj in totals)
-            total_pos = sum(totals.values())
-            overall   = round(total_att / total_pos * 100) if total_pos else 0
-
-            # Find subjects below 75%
-            weak = []
-            for subj, tot in totals.items():
-                att = attended.get(subj, 0)
-                pct = round(att / tot * 100) if tot else 0
-                if pct < 75:
-                    weak.append(f"{subj}({pct}%)")
-
-            if weak or overall < 75:
-                at_risk.append({
-                    "username": s["username"],
-                    "name": s["full_name"],
-                    "section": s["section"],
-                    "overall": overall,
-                    "weak_subjects": weak
-                })
-
-    if not at_risk:
-        return jsonify(success=True, alerts=[], summary="All students are above 75% — great!")
-
-    # Ask AI to write personalised alert messages
-    student_list = "\n".join(
-        f"- {s['name']} (ID:{s['username']}, {s['overall']}% overall, weak: {', '.join(s['weak_subjects']) or 'none'})"
-        for s in at_risk[:20]  # cap at 20 to stay within token limits
-    )
-
-    prompt = f"""These {len(at_risk)} students are at risk of attendance detention.
-{student_list}
-
-For each student write ONE short personalised alert message (1 sentence, under 20 words).
-Mention their specific weak subject(s) and overall %. Be direct but encouraging.
-Return ONLY a JSON array like:
-[{{"username":"1","message":"Your ML attendance is 45% — attend 3 more classes to avoid detention."}}]
-No other text, no markdown."""
-
-    raw = ask_gemini(prompt)
-    # Parse AI response
-    try:
-        raw_clean = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
-        ai_alerts = json.loads(raw_clean)
-    except Exception:
-        # Fallback: generate rule-based messages
-        ai_alerts = [
-            {"username": s["username"],
-             "message": f"⚠️ {s['name']}: {s['overall']}% overall. Weak: {', '.join(s['weak_subjects'][:2]) or 'multiple subjects'}."}
-            for s in at_risk
-        ]
-
-    return jsonify(success=True, alerts=ai_alerts, at_risk_count=len(at_risk),
-                   summary=f"{len(at_risk)} students flagged as at-risk.")
-
-
-@app.route("/ai/key", methods=["POST"])
-@require_role("admin")
-def set_ai_key():
-    """Allow admin to set Groq or Gemini API key at runtime without restarting."""
-    global GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY
-    d = request.json or {}
-    key      = d.get("key", "").strip()
-    provider = d.get("provider", "openrouter").lower()
-    if not key:
-        return jsonify(success=False, msg="No key provided")
-    if provider == "gemini":
-        GEMINI_API_KEY = key
-        return jsonify(success=True, msg="Gemini API key updated!")
-    elif provider == "groq":
-        GROQ_API_KEY = key
-        return jsonify(success=True, msg="Groq API key updated!")
-    else:
-        OPENROUTER_API_KEY = key
-        return jsonify(success=True, msg="OpenRouter API key updated!")
-
-
 # ── SERVE STATIC FILES (open via http://127.0.0.1:5000) ──
 import os as _os
 _BASE = _os.path.dirname(_os.path.abspath(__file__))
@@ -1460,40 +1114,20 @@ def serve_root():
 def serve_dashboard():
     return send_from_directory(_BASE, "dashboard.html")
 
-# NOTE: /<path:filename> is registered LAST so all specific API routes take priority.
-# Flask matches specific routes before catch-alls, so /ai/chat etc. are safe.
-@app.route("/static/<path:filename>")
-def serve_static_file(filename):
-    """Serve static assets from a /static/ prefix to avoid any route conflicts."""
+@app.route("/<path:filename>")
+def serve_file(filename):
+    # Only serve known static files, not API routes
     allowed = {".html", ".js", ".css", ".png", ".jpg", ".ico", ".svg", ".woff", ".woff2"}
     ext = _os.path.splitext(filename)[1].lower()
-    filepath = _os.path.join(_BASE, filename)
-    if ext in allowed and _os.path.exists(filepath):
+    if ext in allowed and _os.path.exists(_os.path.join(_BASE, filename)):
         return send_from_directory(_BASE, filename)
-    from flask import abort
-    abort(404)
-
-@app.route("/script.js")
-def serve_scriptjs():
-    return send_from_directory(_BASE, "script.js")
-
-@app.route("/dashboard.html")
-def serve_dashboard_html():
-    return send_from_directory(_BASE, "dashboard.html")
-
-@app.route("/index.html")
-def serve_index_html():
-    return send_from_directory(_BASE, "index.html")
+    return jsonify(error="Not found"), 404
 
 if __name__ == "__main__":
     print()
     print("=" * 55)
     print("  CampusConnect is running!")
-    print(f"  OpenRouter: {'SET ✓' if OPENROUTER_API_KEY else 'NOT SET ✗'}")
-    print(f"  Groq key:   {'SET ✓' if GROQ_API_KEY else 'NOT SET ✗'}")
-    print(f"  Gemini key: {'SET ✓' if GEMINI_API_KEY else 'NOT SET ✗'}")
-    print("  Open in browser: http://127.0.0.1:5000")
-    print("  Test AI routes: http://127.0.0.1:5000/ai/test")
+    print("  Open in browser: http://127.0.0.1:5000/app/login")
     print("=" * 55)
     print()
     app.run(host="0.0.0.0", port=5000, debug=True)
