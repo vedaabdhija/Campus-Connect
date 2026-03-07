@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CampusConnect — Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root {
+      --bg:#0f1117;--surface:#171b26;--surface2:#1e2235;--border:#2a2f45;
+      --primary:#4f8ef7;--primary2:#7b5ea7;--green:#22c55e;--red:#ef4444;
+      --yellow:#f59e0b;--cyan:#06b6d4;--text:#e8eaf0;--muted:#6b7280;
+      --shadow:0 4px 24px rgba(0,0,0,0.4);
+      --fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
+    }
+    body.light-mode {
+      --bg:#f0f2f8;--surface:#ffffff;--surface2:#f4f6fb;--border:#dde1ed;
+      --primary:#3a7de0;--primary2:#6d4fc7;--green:#16a34a;--red:#dc2626;
+      --yellow:#d97706;--cyan:#0891b2;--text:#111827;--muted:#6b7280;
+      --shadow:0 4px 24px rgba(0,0,0,0.08);
+    }
+    body.light-mode .nav-item.active{background:rgba(58,125,224,.1);color:var(--primary);}
+    body.light-mode .chat-bubble{background:var(--surface2);}
+    body.light-mode thead tr{background:var(--surface2);}
+    body.light-mode td{border-bottom-color:var(--border);}
+    body.light-mode tbody tr:hover td{background:#eef1f9;}
+    body.light-mode .modal-box{box-shadow:0 20px 60px rgba(0,0,0,0.15);}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--fb);background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;}
+    /* SIDEBAR */
+    .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;}
+    .sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+    .logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),var(--primary2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+    .sidebar-logo h2{font-family:var(--fh);font-size:15px;font-weight:800;letter-spacing:.5px;}
+    .sidebar-logo p{font-size:11px;color:var(--muted);margin-top:2px;}
+    .sidebar-nav{flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
+    .nav-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;padding:8px 8px 4px;margin-top:6px;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;cursor:pointer;transition:all .15s;border:none;background:none;width:100%;text-align:left;}
+    .nav-item i{width:16px;text-align:center;font-size:13px;}
+    .nav-item:hover{background:var(--surface2);color:var(--text);}
+    .nav-item.active{background:rgba(79,142,247,.12);color:var(--primary);}
+    .nav-item.danger{color:#ef4444;}
+    .nav-item.danger:hover{background:rgba(239,68,68,.1);}
+    .sidebar-user{padding:14px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+    .user-avatar{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--primary2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+    .user-details{flex:1;min-width:0;}
+    .user-details .uname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .user-details .urole{font-size:11px;color:var(--muted);text-transform:capitalize;}
+    /* MAIN */
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+    .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .topbar-left h1{font-family:var(--fh);font-size:20px;font-weight:700;}
+    .topbar-left .breadcrumb{font-size:12px;color:var(--muted);margin-top:1px;}
+    .topbar-right{display:flex;align-items:center;gap:12px;}
+    .subject-pill{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:13px;padding:6px 14px;border-radius:20px;cursor:pointer;outline:none;}
+    .topbar-date{font-size:12px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:6px 12px;border-radius:20px;}
+    .content{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+    .content::-webkit-scrollbar{width:6px;}
+    .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    /* CARDS */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);}
+    .card-title{font-family:var(--fh);font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .card-title i{color:var(--primary);font-size:12px;}
+    /* STAT CARDS */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:7px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+    .stat-card:hover{transform:translateY(-2px);border-color:var(--primary);}
+    .stat-card::before{content:'';position:absolute;top:0;right:0;width:70px;height:70px;border-radius:50%;background:var(--sc-accent,rgba(79,142,247,.08));transform:translate(18px,-18px);}
+    .stat-icon{width:34px;height:34px;border-radius:9px;background:var(--sc-accent,rgba(79,142,247,.15));display:flex;align-items:center;justify-content:center;font-size:15px;}
+    .stat-label{font-size:11px;color:var(--muted);font-weight:500;font-family:'Space Grotesk',sans-serif;}
+    .stat-value{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;line-height:1;}
+    .stat-sub{font-size:11px;color:var(--muted);font-family:'Space Grotesk',sans-serif;}
+    .stat-sub{font-size:11px;color:var(--muted);}
+    /* GRIDS */
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+    .g6535{display:grid;grid-template-columns:65fr 35fr;gap:18px;}
+    .col{display:flex;flex-direction:column;gap:18px;}
+    /* PROGRESS */
+    .subj-list{display:flex;flex-direction:column;gap:12px;}
+    .subj-row{display:flex;flex-direction:column;gap:5px;}
+    .subj-top{display:flex;justify-content:space-between;align-items:center;}
+    .subj-name{font-size:12.5px;font-weight:500;}
+    .subj-pct{font-size:12px;font-weight:700;}
+    .prog-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+    .prog-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.34,1.56,.64,1);}
+    /* ALERTS */
+    .alert-list{display:flex;flex-direction:column;gap:8px;}
+    .alert-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:9px;border-left:3px solid;font-size:12.5px;line-height:1.5;}
+    .alert-item i{margin-top:2px;flex-shrink:0;}
+    .alert-item.warning{background:rgba(245,158,11,.08);border-color:var(--yellow);color:#fbbf24;}
+    .alert-item.critical{background:rgba(239,68,68,.08);border-color:var(--red);color:#f87171;}
+    .alert-item.motivation{background:rgba(34,197,94,.08);border-color:var(--green);color:#4ade80;}
+    .alert-item.info{background:rgba(6,182,212,.08);border-color:var(--cyan);color:#22d3ee;}
+    /* BUTTONS */
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;font-family:var(--fb);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+    .btn-primary{background:var(--primary);color:#fff;}
+    .btn-primary:hover{background:#3a7de0;transform:translateY(-1px);}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+    .btn-secondary:hover{border-color:var(--primary);color:var(--primary);}
+    .btn-danger{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+    .btn-success{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+    .btn-sm{padding:5px 10px;font-size:11px;}
+    .btn-full{width:100%;justify-content:center;}
+    /* INPUTS */
+    .ifield{width:100%;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--fb);font-size:13px;outline:none;transition:border-color .2s;}
+    .ifield:focus{border-color:var(--primary);}
+    .ifield::placeholder{color:var(--muted);}
+    .igroup{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+    .ilabel{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.4px;}
+    /* TABLE */
+    .twrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    thead tr{border-bottom:1px solid var(--border);}
+    th{padding:9px 13px;text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;}
+    td{padding:11px 13px;border-bottom:1px solid rgba(42,47,69,.5);}
+    tr:last-child td{border-bottom:none;}
+    tbody tr:hover td{background:var(--surface2);}
+    .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+    .bg{background:rgba(34,197,94,.12);color:var(--green);}
+    .br{background:rgba(239,68,68,.12);color:var(--red);}
+    .by{background:rgba(245,158,11,.12);color:var(--yellow);}
+    .bb{background:rgba(79,142,247,.12);color:var(--primary);}
+    /* CHAT */
+    .chat-msgs{height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;margin-bottom:10px;}
+    .chat-msgs::-webkit-scrollbar{width:3px;}
+    .chat-msgs::-webkit-scrollbar-thumb{background:var(--border);}
+    .chat-bubble{padding:8px 11px;border-radius:9px;background:var(--surface2);font-size:12.5px;line-height:1.4;}
+    .chat-bubble strong{color:var(--primary);font-size:11px;display:block;margin-bottom:2px;}
+    .chat-input-row{display:flex;gap:8px;}
+    /* QR */
+    .qr-box{text-align:center;padding:18px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);margin-top:14px;}
+    .code-disp{font-family:var(--fh);font-size:28px;font-weight:800;letter-spacing:7px;color:var(--primary);background:var(--surface);border:2px dashed var(--border);border-radius:9px;padding:10px 18px;margin:10px 0;display:inline-block;}
+    .qr-timer{color:var(--red);font-weight:700;font-size:13px;margin-top:6px;}
+    /* RING */
+    .ring-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0;}
+    .pct-ring{position:relative;width:120px;height:120px;}
+    .pct-ring svg{transform:rotate(-90deg);}
+    .ring-bg{fill:none;stroke:var(--surface2);stroke-width:9;}
+    .ring-fill{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.34,1.56,.64,1);}
+    .ring-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .ring-num{font-family:var(--fh);font-size:24px;font-weight:800;line-height:1;}
+    .ring-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+    /* MODALS */
+    .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+    .modal-ov.open{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;width:90%;max-width:540px;position:relative;max-height:90vh;overflow-y:auto;}
+    .modal-close{position:absolute;top:14px;right:14px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+    .modal-close:hover{color:var(--text);}
+    .modal-title{font-family:var(--fh);font-size:17px;font-weight:700;margin-bottom:18px;}
+    /* NOTES */
+    .notes-list{display:flex;flex-direction:column;gap:7px;max-height:240px;overflow-y:auto;}
+    .note-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:12.5px;gap:8px;}
+    .note-item.locked{opacity:.5;}
+    .note-left{display:flex;flex-direction:column;gap:2px;}
+    .ntag{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(79,142,247,.12);color:var(--primary);display:inline-block;margin-bottom:1px;}
+    .ntag.imp{background:rgba(245,158,11,.12);color:var(--yellow);}
+    /* SECTIONS */
+    .role-section{display:none;}
+    .role-section.visible{display:contents;}
+    /* EMPTY */
+    .empty{text-align:center;padding:24px;color:var(--muted);font-size:12.5px;}
+    .empty i{font-size:24px;margin-bottom:6px;display:block;}
+    /* ANIM */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+    .card,.stat-card{animation:fadeUp .3s ease both;}
+    /* ── TABLET (900px) ─────────────────────────────── */
+    @media(max-width:900px){
+      .g2,.g6535{grid-template-columns:1fr;}
+      .g3{grid-template-columns:1fr 1fr;}
+      .sidebar{width:200px;min-width:200px;}
+      .sidebar-logo h2{font-size:13px;}
+      .content{padding:18px 20px;}
+    }
+
+    /* ── HAMBURGER — hidden on desktop ─────────────── */
+    .hamburger{
+      display:none;
+      background:none;border:none;color:var(--text);
+      font-size:20px;cursor:pointer;padding:8px;
+      align-items:center;justify-content:center;
+      border-radius:8px;transition:background .15s;
+      flex-shrink:0;
+    }
+    .hamburger:hover{background:var(--surface2);}
+
+    /* ── BOTTOM NAV — hidden on desktop ─────────────── */
+    .bottom-nav{
+      display:none;
+      position:fixed;bottom:0;left:0;right:0;
+      background:var(--surface);
+      border-top:1px solid var(--border);
+      box-shadow:0 -4px 20px rgba(0,0,0,.3);
+      z-index:400;
+      padding:4px 0 calc(4px + env(safe-area-inset-bottom));
+      justify-content:space-around;align-items:center;
+    }
+    .bnav-item{
+      display:flex;flex-direction:column;align-items:center;gap:2px;
+      background:none;border:none;color:var(--muted);cursor:pointer;
+      padding:6px 4px;border-radius:10px;font-family:var(--fb);
+      transition:color .15s,background .15s;
+      flex:1;max-width:80px;
+    }
+    .bnav-item i{font-size:20px;line-height:1;}
+    .bnav-item span{font-size:9.5px;font-weight:600;margin-top:1px;}
+    .bnav-item.active{color:var(--primary);}
+    .bnav-item.active i{filter:drop-shadow(0 0 6px var(--primary));}
+
+    /* ── MOBILE (768px) ──────────────────────────────── */
+    @media(max-width:768px){
+      /* Full viewport layout */
+      body{flex-direction:column;height:100dvh;height:100svh;overflow:hidden;}
+
+      /* Sidebar — slide-in drawer */
+      .sidebar{
+        position:fixed;top:0;left:0;bottom:0;z-index:500;
+        width:80vw;max-width:290px;min-width:unset;
+        transform:translateX(-100%);
+        transition:transform .28s cubic-bezier(.4,0,.2,1);
+        display:flex !important;
+        box-shadow:4px 0 24px rgba(0,0,0,.5);
+      }
+      .sidebar.mobile-open{transform:translateX(0);}
+
+      /* Overlay behind sidebar */
+      .sidebar-overlay{
+        display:none;position:fixed;inset:0;
+        background:rgba(0,0,0,.55);
+        z-index:499;backdrop-filter:blur(2px);
+      }
+      .sidebar-overlay.visible{display:block;}
+
+      .main{flex:1;display:flex;flex-direction:column;overflow:hidden;width:100%;}
+
+      /* Topbar */
+      .topbar{padding:0 12px;height:54px;gap:8px;}
+      .topbar-left h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;}
+      .topbar-left .breadcrumb{display:none;}
+      .topbar-date{display:none;}
+      .hamburger{display:flex !important;}
+      #themeToggle{width:32px;height:32px;font-size:13px;flex-shrink:0;}
+
+      /* Scrollable content area with bottom nav padding */
+      .content{
+        padding:12px 10px;
+        gap:12px;
+        padding-bottom:calc(72px + env(safe-area-inset-bottom));
+        overflow-y:auto;
+        -webkit-overflow-scrolling:touch;
+      }
+
+      /* All multi-col grids → single column */
+      .g2,.g3,.g6535{grid-template-columns:1fr !important;}
+
+      /* Stat cards → 2 per row always */
+      .stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}
+      .stat-card{padding:12px 10px;gap:5px;}
+      .stat-card::before{width:50px;height:50px;}
+      .stat-icon{width:30px;height:30px;font-size:13px;}
+      .stat-value{font-size:18px;}
+      .stat-label{font-size:10px;}
+      .stat-sub{font-size:10px;}
+
+      /* Cards */
+      .card{padding:13px 12px;border-radius:11px;}
+      .card-title{font-size:11.5px;margin-bottom:10px;}
+
+      /* Buttons — taller touch targets */
+      .btn{padding:11px 14px;font-size:13px;border-radius:9px;}
+      .btn-sm{padding:8px 11px;font-size:11.5px;}
+
+      /* Inputs — bigger for touch */
+      .ifield{padding:12px 12px;font-size:16px !important;border-radius:9px;-webkit-appearance:none;appearance:none;}
+      select.ifield{padding:11px 12px;}
+      textarea.ifield{font-size:14px !important;}
+
+      /* Tables */
+      .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;}
+      table{font-size:11px;min-width:460px;}
+      th{padding:8px 9px;font-size:10px;}
+      td{padding:9px 9px;}
+
+      /* Chart heights */
+      #dashboardChart,#parentChart,#adminSubjectChart{height:180px !important;}
+      canvas{max-height:200px;}
+
+      /* Ring chart — slightly smaller */
+      .pct-ring{width:100px;height:100px;}
+      .ring-num{font-size:20px;}
+
+      /* Code display */
+      .code-disp{font-size:20px;letter-spacing:4px;padding:8px 12px;}
+
+      /* Modals — bottom sheet */
+      .modal-box{
+        width:100% !important;max-width:100% !important;
+        border-radius:22px 22px 0 0 !important;
+        position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;top:auto !important;
+        max-height:90dvh !important;
+        margin:0 !important;padding:20px 16px 32px !important;
+        overflow-y:auto;
+      }
+      .modal-ov{align-items:flex-end !important;}
+      .modal-title{font-size:15px;}
+
+      /* Modal drag handle indicator */
+      .modal-box::before{
+        content:'';display:block;width:36px;height:4px;
+        background:var(--border);border-radius:2px;
+        margin:0 auto 16px;
+      }
+
+      /* Note viewer */
+      #noteViewerBody iframe,#noteViewerBody canvas{height:52vh !important;}
+      #pdfCanvasWrap{max-height:52vh !important;}
+
+      /* Chat messages */
+      .chat-msgs{height:140px;}
+
+      /* Admin table search row */
+      #adminSearch{font-size:14px;}
+
+      /* Bottom nav visible */
+      .bottom-nav{display:flex !important;}
+
+      /* Hide scrollbar on mobile for cleaner look */
+      .content::-webkit-scrollbar{display:none;}
+      .content{-ms-overflow-style:none;scrollbar-width:none;}
+    }
+
+    /* ── SMALL PHONES (400px) ────────────────────────── */
+    @media(max-width:400px){
+      .stats-row{grid-template-columns:repeat(2,1fr);}
+      .stat-value{font-size:16px;}
+      .stat-card{padding:10px 8px;}
+      .topbar-left h1{font-size:13px;}
+      .content{padding:10px 8px;gap:10px;}
+      .card{padding:11px 10px;}
+      .btn{padding:10px 12px;font-size:12px;}
+    }
+
+    /* ── LANDSCAPE MOBILE ────────────────────────────── */
+    @media(max-width:768px) and (orientation:landscape){
+      .content{padding-bottom:calc(60px + env(safe-area-inset-bottom));}
+      .modal-box{max-height:95dvh !important;}
+      .stats-row{grid-template-columns:repeat(4,1fr);}
+      #dashboardChart{height:140px !important;}
+    }
+
+    /* ── LARGE DESKTOP (1400px+) ─────────────────────── */
+    @media(min-width:1400px){
+      .content{padding:28px 36px;}
+      .sidebar{width:260px;min-width:260px;}
+      .stats-row{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🎓</div>
+    <div><h2>CampusConnect</h2><p>Attendance Portal</p></div>
+  </div>
+  <nav class="sidebar-nav" id="sidebarNav"></nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" id="avatarInitial">?</div>
+    <div class="user-details">
+      <div class="uname" id="sidebarName">Loading...</div>
+      <div class="urole" id="sidebarRole">—</div>
+    </div>
+  </div>
+</aside>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
+<div class="main">
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileSidebar()" aria-label="Menu">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-left">
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="breadcrumb" id="pageSubtitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55vw">Welcome back</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="currentDate"></div>
+      <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .2s;" title="Toggle light/dark mode">🌙</button>
+    </div>
+  </header>
+
+  <div class="content" id="mainContent">
+
+    <!-- STUDENT -->
+    <div class="role-section" id="sec-student">
+      <div class="stats-row" id="studentStatCards"></div>
+      <div class="g6535">
+        <div class="col">
+          <div class="card">
+            <div class="card-title"><i class="fas fa-chart-bar"></i>Subject-wise Attendance</div>
+            <div style="height:220px"><canvas id="dashboardChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-list"></i>Breakdown by Subject</div>
+            <div id="subjectBreakdown"></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card" style="text-align:center">
+            <div class="card-title"><i class="fas fa-circle-notch"></i>Overall Attendance</div>
+            <svg viewBox="0 0 120 120" style="width:130px;height:130px;margin:0 auto;display:block;">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface2)" stroke-width="12"/>
+              <circle id="ringFill" cx="60" cy="60" r="50" fill="none" stroke="var(--green)" stroke-width="12"
+                stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+                transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .6s ease,stroke .4s"/>
+            </svg>
+            <div id="overallPctNum" style="font-family:var(--fh);font-size:26px;font-weight:800;margin-top:4px">0%</div>
+            <div id="badgeText" style="font-size:13px;margin-top:4px;color:var(--muted)">overall</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-bell"></i>Alerts</div>
+            <div id="studentAlerts"><div class="empty"><i class="fas fa-check-circle"></i>No alerts</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-qrcode"></i>Mark Attendance</div>
+            <button class="btn btn-primary btn-full" onclick="startCameraScan()"><i class="fas fa-camera"></i>Scan QR Code</button>
+            <div class="igroup" style="margin-top:12px"><label class="ilabel">Subject</label>
+              <select class="ifield" id="studentSubjectSel"></select>
+            </div>
+            <input class="ifield" id="manualCode" placeholder="Enter captcha code" style="margin-top:8px" onkeydown="if(event.key==='Enter')submitCode()">
+            <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="submitCode()">Submit Code</button>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-edit"></i>Request Attendance Correction</div>
+            <p style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Missed marking? Submit a correction request.</p>
+            <button class="btn btn-secondary btn-full" onclick="openCorrectionModal()"><i class="fas fa-paper-plane"></i>Submit Request</button>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fas fa-comments"></i>Class Chat</div>
+            <div class="chat-msgs" id="chatContent"></div>
+            <div class="chat-input-row">
+              <input class="ifield" id="chatInput" placeholder="Type a message...">
+              <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- AI ASSISTANT -->
+      <div class="card" style="margin-top:0;border:1px solid rgba(79,142,247,.3);background:linear-gradient(135deg,rgba(79,142,247,.05),rgba(139,92,246,.05))">
+        <div class="card-title" style="color:var(--primary)"><i class="fas fa-robot"></i>AI Attendance Assistant <span style="font-size:10px;background:rgba(79,142,247,.2);color:var(--primary);padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:600">BETA</span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Ask anything about your attendance — how many classes you can miss, which subject needs attention, predictions, and more.</p>
+        <div id="aiChatHistory" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <input class="ifield" id="aiChatInput" placeholder="e.g. How many ML classes can I miss?" style="flex:1" onkeydown="if(event.key==='Enter')sendAiMessage()">
+          <button class="btn btn-primary" onclick="sendAiMessage()" id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('aiChatInput').value='What is my overall attendance?';sendAiMessage()">Overall %</button>
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('aiChatInput').value='Which subject needs the most attention?';sendAiMessage()">Weakest subject</button>
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('aiChatInput').value='How many more classes can I miss and stay above 75%?';sendAiMessage()">Classes I can miss</button>
+        </div>
+      </div>
+      <!-- NOTES SECTION -->
+      <div class="card" style="margin-top:0">
+        <div class="card-title"><i class="fas fa-folder-open"></i>Study Notes &amp; Resources</div>
+        <div id="notesList"><div class="empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- FACULTY -->
+    <div class="role-section" id="sec-faculty">
+      <div class="stats-row" id="facultyStatCards"></div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-play-circle"></i>Start QR Session</div>
+          <div class="igroup"><label class="ilabel">Subject</label>
+            <select class="ifield" id="facSubjectSel"></select>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="generateQR()"><i class="fas fa-play-circle"></i>Start Session</button>
+          <div id="qrDisplay" style="margin-top:14px;text-align:center;display:none">
+            <div id="qrCode" style="margin:0 auto 10px"></div>
+            <div style="font-size:12px;color:var(--muted)">Code: <strong id="qrCodeText"></strong></div>
+            <div style="font-size:11px;color:var(--muted)" id="qrTimer"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-user-check"></i>Mark Present Manually</div>
+          <div class="igroup"><label class="ilabel">Student ID</label>
+            <input class="ifield" id="manualStudent" placeholder="e.g. 42">
+          </div>
+          <div class="igroup"><label class="ilabel">Subject</label>
+            <select class="ifield" id="facSubjectSel2"></select>
+          </div>
+          <button class="btn btn-success btn-full" onclick="manualMark()"><i class="fas fa-check"></i>Mark Present</button>
+          <div id="manualMarkResult" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-upload"></i>Upload Notes / Resources</div>
+          <div style="display:flex;gap:14px;margin-bottom:10px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="radio" name="facNType" value="note" checked> Notes
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="radio" name="facNType" value="imp_ques"> Important Questions
+            </label>
+          </div>
+          <input type="file" id="facNoteFile" style="display:none" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.gif" onchange="uploadNoteFaculty(this)">
+          <button class="btn btn-secondary btn-full" onclick="document.getElementById('facNoteFile').click()"><i class="fas fa-paperclip"></i>Select File</button>
+          <div id="uploadStatus" style="margin-top:8px;font-size:12px"></div>
+          <div style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px">
+            <div><span style="color:var(--green)">✅ Accepted:</span> PDF, PNG, JPG, TXT</div>
+            <div><span style="color:var(--red)">🚫 Not supported:</span> Word, PowerPoint, Excel</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-chart-line"></i>Student Attendance Report</div>
+          <button class="btn btn-secondary btn-full" onclick="viewFacultyReport()" style="margin-bottom:14px"><i class="fas fa-sync"></i>Load Report</button>
+          <div class="twrap" id="facultyResult"><div class="empty"><i class="fas fa-table"></i>Click to load</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-history"></i>My Session History</div>
+          <div id="facultySessionHistory"><div class="empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-check-square"></i>Attendance Correction Requests</div>
+          <div id="correctionList"><div class="empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>
+        </div>
+      </div>
+      <!-- AI AT-RISK -->
+      <div class="card" style="margin-top:0;border:1px solid rgba(239,68,68,.25);background:linear-gradient(135deg,rgba(239,68,68,.04),rgba(245,158,11,.04))">
+        <div class="card-title" style="color:#ef4444"><i class="fas fa-robot"></i>AI At-Risk Scanner <span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;padding:2px 8px;border-radius:10px;margin-left:6px">BETA</span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">AI analyses all students and generates personalised alert messages for those below 75%.</p>
+        <button class="btn btn-danger btn-full" onclick="runAiAtRisk()" id="atRiskBtn"><i class="fas fa-search"></i>Scan for At-Risk Students</button>
+        <div id="atRiskResults" style="margin-top:12px"></div>
+      </div>
+      <!-- NOTES -->
+      <div class="card" style="margin-top:0">
+        <div class="card-title"><i class="fas fa-folder-open"></i>Study Notes &amp; Resources</div>
+        <div id="facNotesList"></div>
+      </div>
+    </div>
+
+    <!-- PARENT -->
+    <div class="role-section" id="sec-parent">
+      <div style="padding:10px 0 14px;font-size:13px;color:var(--muted)" id="parentChildInfo"></div>
+      <div class="stats-row" id="parentStatCards"></div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-chart-bar"></i>Attendance Overview</div>
+          <div style="height:220px"><canvas id="parentChart"></canvas></div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div class="card-title"><i class="fas fa-circle-notch"></i>Overall Attendance</div>
+          <svg viewBox="0 0 120 120" style="width:130px;height:130px;margin:0 auto;display:block;">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface2)" stroke-width="12"/>
+            <circle id="parentRingFill" cx="60" cy="60" r="50" fill="none" stroke="var(--cyan)" stroke-width="12"
+              stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+              transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .6s ease,stroke .4s"/>
+          </svg>
+          <div id="parentPctNum" style="font-family:var(--fh);font-size:26px;font-weight:800;margin-top:4px">0%</div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-list"></i>Subject Breakdown</div>
+          <div id="parentSubjectBreakdown"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-bell"></i>Alerts</div>
+          <div id="parentAlerts"><div class="empty"><i class="fas fa-check-circle"></i>No alerts</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="role-section" id="sec-admin">
+      <div class="stats-row" id="adminStatCards"></div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-chart-pie"></i>Attendance Distribution</div>
+          <div style="height:190px"><canvas id="adminPieChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-chart-bar"></i>Subject Overview</div>
+          <div style="height:190px"><canvas id="adminSubjectChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-bullhorn"></i>Broadcast Alerts</div>
+          <div class="igroup"><label class="ilabel">Student ID (optional)</label>
+            <input class="ifield" id="alertTarget" placeholder="Leave blank for all students">
+          </div>
+          <div class="igroup"><label class="ilabel">Type</label>
+            <select class="ifield" id="alertType">
+              <option value="warning">⚠️ Low Attendance Warning</option>
+              <option value="motivation">🌟 Motivational Message</option>
+              <option value="info">ℹ️ General Info</option>
+            </select>
+          </div>
+          <div class="igroup"><label class="ilabel">Custom Message (optional)</label>
+            <input class="ifield" id="alertMsg" placeholder="Leave blank for default message">
+          </div>
+          <button class="btn btn-primary btn-full" onclick="adminSendAlert()"><i class="fas fa-paper-plane"></i>Send Alert</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-user-plus"></i>Add New User</div>
+          <button class="btn btn-success btn-full" onclick="openAddUser()"><i class="fas fa-plus"></i>Add Student / Faculty / Parent</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-download"></i>Export Reports</div>
+          <button class="btn btn-secondary btn-full" onclick="exportAttendanceCSV()"><i class="fas fa-file-csv"></i>Download Attendance CSV</button>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-tachometer-alt"></i>System Overview</div>
+          <div id="adminHealth"><div class="empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>
+        </div>
+      </div>
+      <!-- AI TOOLS -->
+      <div class="card" style="border:1px solid rgba(79,142,247,.3);background:linear-gradient(135deg,rgba(79,142,247,.05),rgba(139,92,246,.05))">
+        <div class="card-title" style="color:var(--primary)"><i class="fas fa-robot"></i>AI Tools <span style="font-size:10px;background:rgba(79,142,247,.2);color:var(--primary);padding:2px 8px;border-radius:10px;margin-left:6px">BETA</span></div>
+        <div class="g2" style="margin-bottom:12px">
+          <div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px"><strong>At-Risk Scanner</strong> — AI writes personalised alerts for all below-75% students</p>
+            <button class="btn btn-danger btn-full" onclick="runAiAtRisk()" id="adminAtRiskBtn"><i class="fas fa-exclamation-triangle"></i>Scan At-Risk Students</button>
+          </div>
+          <div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:6px"><strong>AI API Keys</strong> — set once, no restart needed</p>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-size:11px;width:72px;color:#22c55e;flex-shrink:0;font-weight:600">OpenRouter</span>
+                <input class="ifield" id="openrouterKeyInput" type="password" placeholder="sk-or-..." style="flex:1;font-size:12px">
+                <button class="btn btn-secondary" style="padding:6px 10px" onclick="saveAiKey('openrouter')"><i class="fas fa-key"></i></button>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-size:11px;width:72px;color:var(--muted);flex-shrink:0">Groq</span>
+                <input class="ifield" id="groqKeyInput" type="password" placeholder="gsk_..." style="flex:1;font-size:12px">
+                <button class="btn btn-secondary" style="padding:6px 10px" onclick="saveAiKey('groq')"><i class="fas fa-key"></i></button>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-size:11px;width:72px;color:var(--muted);flex-shrink:0">Gemini</span>
+                <input class="ifield" id="geminiKeyInput" type="password" placeholder="AIza..." style="flex:1;font-size:12px">
+                <button class="btn btn-secondary" style="padding:6px 10px" onclick="saveAiKey('gemini')"><i class="fas fa-key"></i></button>
+              </div>
+              <p style="font-size:10px;color:var(--muted);margin:0">🟢 OpenRouter (primary, free) → Groq → Gemini (fallbacks)</p>
+            </div>
+          </div>
+        </div>
+        <div id="adminAtRiskResults" style="margin-top:4px"></div>
+      </div>
+      <!-- FULL STUDENT REPORT TABLE -->
+      <div class="card" style="margin-top:0">
+        <div class="card-title"><i class="fas fa-table"></i>All Students Report</div>
+        <input class="ifield" id="adminSearch" placeholder="🔍 Search by name or ID..." oninput="filterAdminTable()" style="margin-bottom:12px">
+        <div class="twrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Attended</th><th>Total</th><th>%</th><th>Status</th><th>Alert</th><th>AI Report</th></tr></thead>
+            <tbody id="adminTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="bottom-nav" id="bottomNav"></nav>
+
+<!-- PROFILE MODAL -->
+<div class="modal-ov" id="profileModal">
+  <div class="modal-box" style="max-width:700px">
+    <button class="modal-close" onclick="closeProfile()">✕</button>
+    <div class="modal-title"><i class="fas fa-id-card" style="color:var(--primary);margin-right:8px"></i>My Profile</div>
+
+    <!-- Profile header card -->
+    <div style="display:flex;align-items:center;gap:18px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px">
+      <div id="profileAvatarBig" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary2));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0;">?</div>
+      <div>
+        <div id="profileFullName" style="font-family:var(--fh);font-size:18px;font-weight:700;">Loading...</div>
+        <div id="profileRoleTag" style="font-size:11px;color:var(--muted);margin-top:3px;text-transform:capitalize;"></div>
+      </div>
+      <div id="profileBadgeDisplay" style="margin-left:auto;font-size:28px;"></div>
+    </div>
+
+    <!-- Info rows -->
+    <div id="profileInfoRows" style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px"></div>
+
+    <!-- Charts (student only) -->
+    <div id="profileGraphs" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;letter-spacing:.8px;text-transform:uppercase;">Attendance Charts</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="font-size:11px;font-weight:600;margin-bottom:8px;text-align:center;">Semester Overview</div>
+          <div style="height:160px"><canvas id="semChart"></canvas></div>
+        </div>
+        <div style="flex:1;min-width:140px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="font-size:11px;font-weight:600;margin-bottom:8px;text-align:center;">By Subject</div>
+          <div style="height:160px"><canvas id="weekChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="profileAlerts" style="margin-top:14px"></div>
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+      <button class="btn btn-secondary" onclick="openChangePassword()"><i class="fas fa-key"></i> Change Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA MODAL -->
+<div class="modal-ov" id="cameraModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="stopCamera()">✕</button>
+    <div class="modal-title"><i class="fas fa-qrcode" style="color:var(--primary);margin-right:8px"></i>Scan QR Code</div>
+    <div id="reader"></div>
+  </div>
+</div>
+
+<!-- NOTE VIEWER MODAL -->
+<div class="modal-ov" id="noteViewerModal">
+  <div class="modal-box" style="max-width:860px;width:95%;max-height:90vh;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="fas fa-file-alt" style="color:var(--primary);font-size:15px;"></i>
+        <span id="noteViewerTitle" style="font-family:var(--fh);font-weight:700;font-size:15px;">Document</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:20px;"><i class="fas fa-lock" style="margin-right:4px;"></i>Read Only</span>
+        <button class="modal-close" style="position:static;" onclick="closeNoteViewer()">✕</button>
+      </div>
+    </div>
+    <div id="noteViewerBody" style="flex:1;overflow:auto;padding:0;min-height:400px;background:#1a1a2e;user-select:none;-webkit-user-select:none;" oncontextmenu="return false;"></div>
+  </div>
+</div>
+
+<!-- DATABASE MANAGER MODAL -->
+<div class="modal-ov" id="dbModal">
+  <div class="modal-box" style="max-width:960px;width:97%;max-height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="fas fa-database" style="color:var(--primary);"></i>
+        <span style="font-family:var(--fh);font-weight:700;font-size:16px;">Database Manager</span>
+        <span style="font-size:11px;color:var(--muted);background:rgba(239,68,68,.1);color:var(--red);padding:2px 9px;border-radius:10px;border:1px solid rgba(239,68,68,.2);">Admin Only</span>
+      </div>
+      <button class="modal-close" style="position:static;" onclick="document.getElementById('dbModal').classList.remove('open')">✕</button>
+    </div>
+
+    <!-- Table selector tabs -->
+    <div style="display:flex;gap:6px;padding:12px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0;background:var(--surface2);">
+      <button class="btn btn-sm btn-secondary" id="dbtab-users"      onclick="loadDbTable('users')">👥 Users</button>
+      <button class="btn btn-sm btn-secondary" id="dbtab-attendance" onclick="loadDbTable('attendance')">✅ Attendance</button>
+      <button class="btn btn-sm btn-secondary" id="dbtab-subject_totals" onclick="loadDbTable('subject_totals')">📚 Subject Totals</button>
+      <button class="btn btn-sm btn-secondary" id="dbtab-sessions"   onclick="loadDbTable('sessions')">🔑 Sessions</button>
+      <button class="btn btn-sm btn-secondary" id="dbtab-messages"   onclick="loadDbTable('messages')">🔔 Messages</button>
+      <button class="btn btn-sm btn-secondary" id="dbtab-notes"      onclick="loadDbTable('notes')">📄 Notes</button>
+      <button class="btn btn-sm btn-secondary" id="dbtab-chat"       onclick="loadDbTable('chat')">💬 Chat</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 22px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;">
+      <input class="ifield" id="dbSearch" placeholder="🔍 Search rows..." oninput="dbFilterRows()" style="max-width:220px;">
+      <button class="btn btn-sm btn-success" onclick="dbAddRow()"><i class="fas fa-plus"></i> Add Row</button>
+      <button class="btn btn-sm btn-secondary" onclick="loadDbTable(window._dbCurrentTable)"><i class="fas fa-sync"></i> Refresh</button>
+      <span id="dbRowCount" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+    </div>
+
+    <!-- Table content -->
+    <div style="flex:1;overflow:auto;padding:12px 14px;-webkit-overflow-scrolling:touch;" id="dbTableWrap">
+      <div class="empty"><i class="fas fa-database"></i><br>Select a table above to view and edit data</div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ROW MODAL -->
+<div class="modal-ov" id="dbEditModal">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="document.getElementById('dbEditModal').classList.remove('open')">✕</button>
+    <div class="modal-title" id="dbEditTitle">Edit Row</div>
+    <div id="dbEditFields" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:60vh;overflow-y:auto;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="document.getElementById('dbEditModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="dbSaveRow()"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- CORRECTION REQUEST MODAL -->
+<div class="modal-ov" id="correctionModal">
+  <div class="modal-box" style="max-width:480px">
+    <button class="modal-close" onclick="document.getElementById('correctionModal').classList.remove('open')">✕</button>
+    <div class="modal-title"><i class="fas fa-edit" style="color:var(--primary);margin-right:8px"></i>Request Attendance Correction</div>
+    <div class="igroup"><label class="ilabel">Subject</label><select class="ifield" id="correctionSubjectSel"></select></div>
+    <div class="igroup"><label class="ilabel">Date of Class</label><input type="date" class="ifield" id="correctionDate"></div>
+    <div class="igroup"><label class="ilabel">Reason</label><textarea class="ifield" id="correctionReason" rows="3" placeholder="Explain why you couldn't mark attendance (network issue, server error, etc.)"></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="submitCorrectionRequest()"><i class="fas fa-paper-plane"></i>Submit Request</button>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-ov" id="changePwModal">
+  <div class="modal-box" style="max-width:420px">
+    <button class="modal-close" onclick="document.getElementById('changePwModal').classList.remove('open')">✕</button>
+    <div class="modal-title"><i class="fas fa-key" style="color:var(--primary);margin-right:8px"></i>Change Password</div>
+    <div class="igroup"><label class="ilabel">Current Password</label><input type="password" class="ifield" id="oldPassword" placeholder="Current password"></div>
+    <div class="igroup"><label class="ilabel">New Password</label><input type="password" class="ifield" id="newPassword" placeholder="At least 6 characters"></div>
+    <div class="igroup"><label class="ilabel">Confirm New Password</label><input type="password" class="ifield" id="confirmPassword" placeholder="Repeat new password"></div>
+    <button class="btn btn-primary btn-full" onclick="submitChangePassword()"><i class="fas fa-save"></i>Change Password</button>
+  </div>
+</div>
+
+<!-- ADD USER MODAL (ADMIN) -->
+<div class="modal-ov" id="addUserModal">
+  <div class="modal-box" style="max-width:540px">
+    <button class="modal-close" onclick="document.getElementById('addUserModal').classList.remove('open')">✕</button>
+    <div class="modal-title"><i class="fas fa-user-plus" style="color:var(--primary);margin-right:8px"></i>Add New User</div>
+    <div class="g2">
+      <div class="igroup"><label class="ilabel">Username / Student ID</label><input class="ifield" id="newUsername" placeholder="e.g. 145 or ArjunKumar"></div>
+      <div class="igroup"><label class="ilabel">Full Name</label><input class="ifield" id="newUserFullName" placeholder="Full name"></div>
+      <div class="igroup"><label class="ilabel">Role</label>
+        <select class="ifield" id="newUserRole" onchange="toggleAddUserFields()">
+          <option value="student">Student</option>
+          <option value="faculty">Faculty</option>
+          <option value="parent">Parent</option>
+        </select>
+      </div>
+      <div class="igroup"><label class="ilabel">Password (default: password)</label><input class="ifield" id="newUserPassword" placeholder="Leave blank for default"></div>
+      <div class="igroup" id="auSectionGrp"><label class="ilabel">Section</label><input class="ifield" id="newUserSection" placeholder="e.g. CSE A"></div>
+      <div class="igroup" id="auSubjectGrp"><label class="ilabel">Subject (faculty)</label><input class="ifield" id="newUserSubject" placeholder="e.g. ML, DS"></div>
+      <div class="igroup" id="auChildGrp" style="display:none"><label class="ilabel">Child Student ID (parent)</label><input class="ifield" id="newUserChild" placeholder="Student username"></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="submitAddUser()" style="margin-top:8px"><i class="fas fa-user-plus"></i>Add User</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+(function(){
+  const d=new Date();
+  const _d=new Date();
+  const dateEl=document.getElementById('currentDate');
+  if(dateEl) dateEl.textContent=_d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+})();
+
+const NAV={
+  student:[{i:'fa-th-large',l:'Dashboard',f:null},{i:'fa-user',l:'My Profile',f:'openProfile()'},{i:'fa-key',l:'Change Password',f:'openChangePassword()'},{i:'fa-sign-out-alt',l:'Logout',f:'logout()',d:true}],
+  faculty:[{i:'fa-th-large',l:'Dashboard',f:null},{i:'fa-user',l:'My Profile',f:'openProfile()'},{i:'fa-key',l:'Change Password',f:'openChangePassword()'},{i:'fa-sign-out-alt',l:'Logout',f:'logout()',d:true}],
+  parent:[{i:'fa-th-large',l:'Dashboard',f:null},{i:'fa-user',l:'My Profile',f:'openProfile()'},{i:'fa-key',l:'Change Password',f:'openChangePassword()'},{i:'fa-sign-out-alt',l:'Logout',f:'logout()',d:true}],
+  admin:[{i:'fa-th-large',l:'Dashboard',f:null},{i:'fa-user-plus',l:'Add User',f:'openAddUser()'},{i:'fa-database',l:'Database',f:'showAdminDb()'},{i:'fa-key',l:'Change Password',f:'openChangePassword()'},{i:'fa-sign-out-alt',l:'Logout',f:'logout()',d:true}],
+};
+
+function buildSidebar(role){
+  const nav=document.getElementById('sidebarNav');
+  nav.innerHTML='<div class="nav-label">Menu</div>'+(NAV[role]||[]).map(it=>
+    `<button class="nav-item${it.d?' danger':''}${!it.f?' active':''}"${it.f?` onclick="${it.f}"`:''}><i class="fas ${it.i}"></i>${it.l}</button>`
+  ).join('');
+}
+
+function setRing(id,pct,color){
+  const el=document.getElementById(id); if(!el)return;
+  el.style.stroke=color;
+  el.style.strokeDashoffset=314-(pct/100)*314;
+}
+
+function sc(icon,label,value,sub,acc){
+  return `<div class="stat-card" style="--sc-accent:${acc}"><div class="stat-icon" style="background:${acc}">${icon}</div><div class="stat-label">${label}</div><div class="stat-value">${value}</div>${sub?`<div class="stat-sub">${sub}</div>`:''}</div>`;
+}
+
+function renderSubjList(cid,att,tots){
+  const el=document.getElementById(cid); if(!el)return;
+  const subs=Object.keys(tots);
+  if(!subs.length){el.innerHTML='<div class="empty">No data</div>';return;}
+  el.innerHTML=subs.map(s=>{
+    const a=att[s]||0,t=tots[s]||1,p=Math.round(a/t*100);
+    const c=p>=75?'var(--green)':p>=60?'var(--yellow)':'var(--red)';
+    return `<div class="subj-row"><div class="subj-top"><span class="subj-name">${s}</span><span class="subj-pct" style="color:${c}">${a}/${t} (${p}%)</span></div><div class="prog-track"><div class="prog-fill" style="width:${p}%;background:${c}"></div></div></div>`;
+  }).join('');
+}
+
+function getBadge(p){
+  if(p>=90)return{text:'🥇 Gold Badge',c:'#f59e0b'};
+  if(p>=75)return{text:'🥈 Silver Badge',c:'#94a3b8'};
+  if(p>=60)return{text:'🥉 Bronze Badge',c:'#b45309'};
+  return{text:'No Badge Yet',c:'var(--muted)'};
+}
+
+let CH={};
+function mkChart(id,cfg){if(CH[id])CH[id].destroy();const c=document.getElementById(id);if(!c)return;CH[id]=new Chart(c,cfg);}
+
+const CHARTOPTS=(extra={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}}},scales:{x:{ticks:{color:'#6b7280'},grid:{color:'#1e2235'}},y:{beginAtZero:true,ticks:{color:'#6b7280'},grid:{color:'#2a2f45'}}},...extra});
+
+function loadStudentDashboard(targetUser,isParent){
+  const user=targetUser||localStorage.getItem('user');
+  apiFetch('/student/data/'+user+'?t='+Date.now()).then(r=>r.json()).then(data=>{
+    if(!data || !data.totals){ console.error('No data returned for student:', user, data); return; }
+    const{attended,totals,messages}=data;
+    const subs=Object.keys(totals);
+    const tAtt=subs.reduce((a,s)=>a+(attended[s]||0),0);
+    const tPos=subs.reduce((a,s)=>a+(totals[s]||0),0);
+    const pct=tPos>0?Math.round(tAtt/tPos*100):0;
+    const rc=pct>=75?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+
+    if(!isParent){
+      const lo=subs.reduce((lo,s)=>{const p=totals[s]?Math.round((attended[s]||0)/totals[s]*100):0,lp=totals[lo]?Math.round((attended[lo]||0)/totals[lo]*100):100;return p<lp?s:lo;},subs[0]||'');
+      const lp=lo&&totals[lo]?Math.round((attended[lo]||0)/totals[lo]*100):0;
+      document.getElementById('studentStatCards').innerHTML=
+        sc('📊','Overall',pct+'%',tAtt+' of '+tPos+' classes','rgba(79,142,247,.12)')+
+        sc('📚','Subjects',subs.length,'tracked this semester','rgba(34,197,94,.12)')+
+        sc('⚠️','Needs Attention',lo||'—',lp+'% attendance','rgba(239,68,68,.12)')+
+        sc('🏆','Badge Status',getBadge(pct).text.split(' ').slice(1).join(' ')||'None',pct+'% overall','rgba(245,158,11,.12)');
+      setRing('ringFill',pct,rc);
+      const pn=document.getElementById('overallPctNum');
+      if(pn){pn.textContent=pct+'%';pn.style.color=rc;}
+      const b=getBadge(pct);
+      const bt=document.getElementById('badgeText');
+      if(bt){bt.textContent=b.text;bt.style.color=b.c;}
+      renderSubjList('subjectBreakdown',attended,totals);
+      mkChart('dashboardChart',{type:'bar',data:{labels:subs,datasets:[{label:'Present',data:subs.map(s=>attended[s]||0),backgroundColor:'#22c55e',borderRadius:5},{label:'Absent',data:subs.map(s=>Math.max(0,(totals[s]||0)-(attended[s]||0))),backgroundColor:'#ef4444',borderRadius:5}]},options:CHARTOPTS({scales:{x:{stacked:true,ticks:{color:'#6b7280'},grid:{color:'#1e2235'}},y:{stacked:true,beginAtZero:true,ticks:{color:'#6b7280'},grid:{color:'#2a2f45'}}}})});
+      const ad=document.getElementById('studentAlerts');
+      if(ad && messages&&messages.length){
+        ad.innerHTML=messages.map(m=>{const cls=m.type==='critical'?'critical':m.type==='warning'?'warning':m.type==='motivation'?'motivation':'info';const ic=m.type==='critical'?'fa-exclamation-triangle':m.type==='warning'?'fa-bell':m.type==='motivation'?'fa-star':'fa-info-circle';return`<div class="alert-item ${cls}"><i class="fas ${ic}"></i><span>${m.text}</span></div>`;}).join('');
+      } else if(ad) {
+        ad.innerHTML='<div class="empty"><i class="fas fa-check-circle"></i>No alerts right now</div>';
+      }
+    } else {
+      document.getElementById('parentStatCards').innerHTML=
+        sc('📊','Overall',pct+'%',tAtt+' of '+tPos+' classes','rgba(6,182,212,.12)')+
+        sc('📚','Subjects',subs.length,'being tracked','rgba(79,142,247,.12)')+
+        sc('🔔','Active Alerts',messages.length,'messages','rgba(239,68,68,.12)');
+      setRing('parentRingFill',pct,pct>=75?'var(--cyan)':pct>=60?'var(--yellow)':'var(--red)');
+      const pp=document.getElementById('parentPctNum');
+      if(pp){pp.textContent=pct+'%';pp.style.color=rc;}
+      renderSubjList('parentSubjectBreakdown',attended,totals);
+      mkChart('parentChart',{type:'bar',data:{labels:subs,datasets:[{label:'Present',data:subs.map(s=>attended[s]||0),backgroundColor:'#06b6d4',borderRadius:5},{label:'Absent',data:subs.map(s=>Math.max(0,(totals[s]||0)-(attended[s]||0))),backgroundColor:'#ef4444',borderRadius:5}]},options:CHARTOPTS({scales:{x:{stacked:true,ticks:{color:'#6b7280'},grid:{color:'#1e2235'}},y:{stacked:true,beginAtZero:true,ticks:{color:'#6b7280'},grid:{color:'#2a2f45'}}}})});
+      const pa=document.getElementById('parentAlerts');
+      if(messages&&messages.length){
+        pa.innerHTML=messages.map(m=>{const cls=m.type==='critical'?'critical':'warning';return`<div class="alert-item ${cls}"><i class="fas fa-bell"></i><span>${m.text}</span></div>`;}).join('');
+      } else {
+        pa.innerHTML='<div class="empty"><i class="fas fa-check-circle"></i>No alerts for your child</div>';
+      }
+    }
+  });
+}
+
+let adminData=[];
+function loadAdminDashboard(){
+  apiFetch('/admin/stats').then(r=>r.json()).then(d=>{
+    document.getElementById('adminStatCards').innerHTML=
+      sc('👥','Total Users',d.users,'registered accounts','rgba(79,142,247,.12)')+
+      sc('✅','Attendance Records',d.attendance,'entries logged','rgba(34,197,94,.12)')+
+      sc('📚','Active Subjects',d.subjects,'being tracked','rgba(245,158,11,.12)');
+    document.getElementById('adminHealth').innerHTML=`
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">Registered Users</span><strong>${d.users}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">Attendance Records</span><strong>${d.attendance}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:9px 0;font-size:12.5px"><span style="color:var(--muted)">Active Subjects</span><strong>${d.subjects}</strong></div>`;
+  });
+  apiFetch('/admin/student-report').then(r=>r.json()).then(data=>{
+    adminData=data.slice().sort((a,b)=>parseInt(a.username)-parseInt(b.username)); renderAdminTable(adminData);
+    const bkts={'≥75%':0,'60–74%':0,'<60%':0};
+    data.forEach(s=>{if(s.pct>=75)bkts['≥75%']++;else if(s.pct>=60)bkts['60–74%']++;else bkts['<60%']++;});
+    mkChart('adminPieChart',{type:'doughnut',data:{labels:Object.keys(bkts),datasets:[{data:Object.values(bkts),backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}}}}});
+  });
+  apiFetch('/faculty/report').then(r=>r.json()).then(d=>{
+    const st={};
+    for(const u in d)for(const s in d[u])st[s]=(st[s]||0)+d[u][s];
+    const labs=Object.keys(st),vals=Object.values(st);
+    mkChart('adminSubjectChart',{type:'bar',data:{labels:labs,datasets:[{label:'Total Attended',data:vals,backgroundColor:'#4f8ef7',borderRadius:5}]},options:CHARTOPTS()});
+  });
+}
+
+function renderAdminTable(data){
+  data = data.slice().sort((a,b)=>parseInt(a.username)-parseInt(b.username));
+  const tb=document.getElementById('adminTableBody');
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px">No students found</td></tr>';return;}
+  tb.innerHTML=data.map(s=>{
+    const cls=s.pct>=75?'bg':s.pct>=60?'by':'br';
+    const lbl=s.pct>=75?'Good':s.pct>=60?'At Risk':'Critical';
+    const c=s.pct>=75?'var(--green)':s.pct>=60?'var(--yellow)':'var(--red)';
+    return`<tr><td style="color:var(--muted);font-size:11.5px">${s.username}</td><td style="font-weight:500">${s.name||'—'}</td><td>${s.attended}</td><td style="color:var(--muted)">${s.total}</td><td><strong style="color:${c}">${s.pct}%</strong></td><td><span class="badge ${cls}">${lbl}</span></td><td><button class="btn btn-sm btn-danger" onclick="quickAlert('${s.username}')"><i class="fas fa-bell"></i></button></td><td><button id="aiReportBtn_${s.username}" class="btn btn-sm" style="background:rgba(79,142,247,.15);color:var(--primary);border:1px solid rgba(79,142,247,.3)" onclick="generateAiReport('${s.username}','${(s.name||'').replace(/'/g,'')}')"><i class="fas fa-robot"></i></button></td></tr>`;
+  }).join('');
+}
+
+function filterAdminTable(){
+  const q=document.getElementById('adminSearch').value.toLowerCase();
+  renderAdminTable(adminData.filter(s=>(s.name||'').toLowerCase().includes(q)||String(s.username).includes(q)));
+}
+
+function quickAlert(u){
+  apiFetch('/admin/send-alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student:u,message:'⚠️ Your attendance is critically low. Please take action immediately.',type:'warning'})})
+  .then(()=>showToast('Alert sent to '+u,'warning'));
+}
+
+function adminSendAlert(){
+  const target=document.getElementById('alertTarget').value.trim();
+  const type=document.getElementById('alertType').value;
+  const custom=document.getElementById('alertMsg').value.trim();
+  const defs={warning:'⚠️ Your attendance is critically low. Please contact your faculty.',motivation:'🌟 Keep it up! Great attendance helps your performance.',info:'ℹ️ Please check the portal for the latest updates.'};
+  const msg=custom||defs[type];
+  if(target){
+    apiFetch('/admin/send-alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student:target,message:msg,type})}).then(()=>showToast('Alert sent to '+target));
+  } else {
+    adminData.forEach(s=>apiFetch('/admin/send-alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student:s.username,message:msg,type})}));
+    showToast('Broadcast sent to all '+adminData.length+' students','success');
+  }
+  document.getElementById('alertTarget').value='';document.getElementById('alertMsg').value='';
+}
+
+let _qrInterval = null;
+
+function generateQR(){
+  const subjEl = document.getElementById('facSubjectSel');
+  if(!subjEl || !subjEl.value){ showToast('No subject selected','danger'); return; }
+  const subj = subjEl.value;
+
+  apiFetch('/generate-qr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:subj})})
+  .then(r=>r.json())
+  .then(d=>{
+    // Show the QR result area
+    const qrResult = document.getElementById('qrResult');
+    if(qrResult) qrResult.style.display='block';
+
+    // Show captcha code
+    const txtCode = document.getElementById('txtCode');
+    if(txtCode) txtCode.textContent = d.code;
+
+    // Generate QR image via qrserver API
+    const qrBox = document.getElementById('qrBox');
+    const qrData = encodeURIComponent(subj+'|'+d.code);
+    if(qrBox) qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}" style="display:block;border-radius:8px;">`;
+
+    // 5-minute countdown timer
+    let secs = 300;
+    clearInterval(_qrInterval);
+    updateQrTimer(secs);
+    _qrInterval = setInterval(()=>{
+      secs--;
+      updateQrTimer(secs);
+      if(secs <= 0){
+        clearInterval(_qrInterval);
+        if(qrBox) qrBox.innerHTML = '<p style="color:var(--red);font-weight:700;padding:16px;">⏰ Session Expired</p>';
+        if(txtCode) txtCode.textContent = '------';
+        const t = document.getElementById('qrTimer');
+        if(t) t.textContent = 'Session ended — generate a new one';
+      }
+    }, 1000);
+
+    showToast('Session started for '+subj+' (5 min)', 'success');
+  })
+  .catch(()=>showToast('Could not reach server. Is app.py running?','danger'));
+}
+
+function updateQrTimer(secs){
+  const t = document.getElementById('qrTimer');
+  if(!t) return;
+  const m = Math.floor(secs/60);
+  const s = secs % 60;
+  const pct = (secs/300)*100;
+  const col = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--yellow)' : 'var(--red)';
+  t.innerHTML = `<span style="color:${col};font-weight:700;">⏱ ${m}:${String(s).padStart(2,'0')} remaining</span>`;
+}
+
+
+function viewFacultyReport(){
+  const el=document.getElementById('facultyResult');
+  if(el) el.innerHTML='<div class="empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div>';
+  apiFetch('/admin/student-report').then(r=>r.json()).then(data=>{
+    if(!el)return;
+    if(!data||!data.length){el.innerHTML='<div class="empty">No data found</div>';return;}
+    el.innerHTML='<table><thead><tr><th>ID</th><th>Name</th><th>Attended</th><th>Total</th><th>%</th><th>Status</th></tr></thead><tbody>'+
+      data.map(s=>{
+        const c=s.pct>=75?'var(--green)':s.pct>=60?'var(--yellow)':'var(--red)';
+        const lbl=s.pct>=75?'Good':s.pct>=60?'At Risk':'Critical';
+        return`<tr><td style="color:var(--muted)">${s.username}</td><td>${s.name||'—'}</td><td>${s.attended}</td><td>${s.total}</td><td><strong style="color:${c}">${s.pct}%</strong></td><td style="color:${c}">${lbl}</td></tr>`;
+      }).join('')+'</tbody></table>';
+  }).catch(()=>{if(el)el.innerHTML='<div class="empty">Failed to load</div>';});
+}
+
+function loadFacultyDashboard(){
+  apiFetch('/admin/stats').then(r=>r.json()).then(d=>{
+    document.getElementById('facultyStatCards').innerHTML=
+      sc('👥','Total Students',d.users,'in the system','rgba(79,142,247,.12)')+
+      sc('✅','Records Logged',d.attendance,'attendance entries','rgba(34,197,94,.12)')+
+      sc('📚','Active Subjects',d.subjects,'subjects','rgba(245,158,11,.12)');
+  });
+  apiFetch('/meta/subjects').then(r=>r.json()).then(subs=>{
+    const opts=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+    const s1=document.getElementById('facSubjectSel'),s2=document.getElementById('manualSubjectSel');
+    if(s1)s1.innerHTML=opts; if(s2)s2.innerHTML=opts;
+  });
+}
+
+window.submitCode = function(scannedText) {
+  const user    = localStorage.getItem('user');
+  let code      = scannedText || (document.getElementById('manualCode')||{}).value || '';
+  code          = code.trim();
+  let subj      = (document.getElementById('studentSubjectSel')||{value:''}).value;
+  const res     = document.getElementById('attendanceResult');
+
+  // QR scan passes "SUBJECT|CODE" — split it
+  if (code.includes('|')) {
+    const parts = code.split('|');
+    subj = parts[0];
+    code = parts[1];
+  }
+
+  if (!code) { showToast('Enter the captcha code first', 'danger'); return; }
+  if (!subj) { showToast('Select a subject first', 'danger'); return; }
+  if (!user) { showToast('Not logged in', 'danger'); return; }
+
+  if (res) res.innerHTML = `<div class="alert-item info" style="margin-top:6px"><i class="fas fa-spinner fa-spin"></i><span>Submitting...</span></div>`;
+
+  apiFetch('/scan-qr', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username: user, subject: subj, code: code })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (res) res.innerHTML = `<div class="alert-item ${d.success ? 'motivation' : 'critical'}" style="margin-top:6px">
+      <i class="fas fa-${d.success ? 'check-circle' : 'times-circle'}"></i>
+      <span><strong>${d.success ? '✅ Attendance Marked!' : '❌ Failed'}</strong> — ${d.msg}</span>
+    </div>`;
+    if (d.success) {
+      showToast('Attendance marked for ' + subj, 'success');
+      document.getElementById('manualCode').value = '';
+      // Refresh the dashboard stats
+      loadStudentDashboard(null, false);
+    } else {
+      showToast(d.msg, 'danger');
+    }
+  })
+  .catch(() => {
+    if (res) res.innerHTML = `<div class="alert-item critical" style="margin-top:6px"><i class="fas fa-times"></i><span>Cannot reach server. Is app.py running?</span></div>`;
+  });
+};
+
+window.manualMark=function(){
+  const student = document.getElementById('manualStudent').value.trim();
+  const subject = (document.getElementById('manualSubjectSel')||{value:''}).value;
+  const res     = document.getElementById('manualMarkResult');
+  if(!student){ showToast('Enter a Student ID','danger'); return; }
+  if(!subject){ showToast('Select a subject first','danger'); return; }
+  if(res) res.innerHTML=`<div class="alert-item info" style="margin-top:8px"><i class="fas fa-spinner fa-spin"></i><span>Marking attendance for student ${student}...</span></div>`;
+  apiFetch('/scan-qr',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:student,subject,code:'MANUAL_OVERRIDE_BY_FACULTY'})})
+  .then(r=>r.json()).then(d=>{
+    if(res) res.innerHTML=`<div class="alert-item ${d.success?'motivation':'critical'}" style="margin-top:8px">
+      <i class="fas fa-${d.success?'check-circle':'times-circle'}"></i>
+      <span><strong>Student ${student}</strong> — ${d.msg}</span>
+    </div>`;
+    if(d.success){ showToast('Attendance marked for '+student,'success'); document.getElementById('manualStudent').value=''; }
+  })
+  .catch(()=>{ if(res) res.innerHTML=`<div class="alert-item critical" style="margin-top:8px"><i class="fas fa-times"></i><span>Server error. Is app.py running?</span></div>`; });
+};
+
+window.uploadNoteFaculty=function(input){
+  const file=input.files[0]; if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const st=document.getElementById('uploadStatus');
+
+  // Warn faculty about unsupported formats
+  const unsupported=['doc','docx','ppt','pptx','xls','xlsx'];
+  const recommended=['pdf','png','jpg','jpeg','txt'];
+  if(unsupported.includes(ext)){
+    if(st)st.innerHTML=`<div class="alert-item critical" style="margin-top:8px">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span><strong>.${ext} files cannot be previewed by students.</strong><br>
+      Students will see a blank screen. Please convert to <strong>PDF or image</strong> before uploading.<br>
+      <em style="font-size:11px;opacity:.8">Tip: In Word/PowerPoint, go to File → Save As → PDF</em></span>
+    </div>`;
+    input.value=''; // clear the file selection
+    return;
+  }
+
+  const cat=document.querySelector('input[name="facNType"]:checked').value;
+  if(st)st.innerHTML=`<div class="alert-item info" style="margin-top:4px"><i class="fas fa-spinner fa-spin"></i><span>Uploading ${file.name}...</span></div>`;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const user=localStorage.getItem('user');
+    const subj=(document.getElementById('facSubjectSel')||{value:''}).value;
+    apiFetch('/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uploader:user,subject:subj,content:e.target.result,filename:file.name,type:'file',category:cat})})
+    .then(r=>r.json()).then(d=>{
+      if(st)st.innerHTML=`<div class="alert-item ${d.success?'motivation':'critical'}" style="margin-top:4px"><i class="fas fa-${d.success?'check-circle':'times'}"></i><span>${d.success?'<strong>'+file.name+'</strong> uploaded successfully!':d.msg}</span></div>`;
+    });
+  };
+  reader.readAsDataURL(file);
+};
+
+function loadNotesDashboard(){
+  const user=localStorage.getItem('user'),role=localStorage.getItem('role');
+  apiFetch(`/notes?username=${encodeURIComponent(user)}&role=${role}`).then(r=>r.json()).then(d=>{
+    const listId=(localStorage.getItem('role')==='faculty'?'facNotesList':'notesList');
+  const list=document.getElementById(listId); if(!list)return;
+    if(!d.notes||!d.notes.length){list.innerHTML='<div class="empty"><i class="fas fa-folder-open"></i>No notes uploaded yet</div>';return;}
+    window._notesMap={};
+    d.notes.forEach(n=>{ window._notesMap[n.id]=n; });
+    const canDelete = role==='faculty'||role==='admin';
+    list.innerHTML=d.notes.map(n=>{
+      const tc=n.category==='imp_ques'?'imp':'',tl=n.category==='imp_ques'?'IMP Q':'NOTE';
+      if(n.locked)return`<div class="note-item locked"><div class="note-left"><span class="ntag ${tc}">${tl}</span><span>${n.subject} — ${n.filename}</span><span style="font-size:11px;color:var(--red)"><i class="fas fa-lock"></i> ${n.reason}</span></div></div>`;
+      return`<div class="note-item"><div class="note-left"><span class="ntag ${tc}">${tl}</span><span style="font-weight:500">${n.subject} — ${n.filename}</span><span style="font-size:11px;color:var(--muted)">By ${n.uploader}</span></div><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-secondary" onclick="viewNote(${n.id})"><i class="fas fa-eye"></i> View</button>${canDelete?`<button class="btn btn-sm btn-danger" onclick="deleteNote(${n.id})"><i class="fas fa-trash"></i></button>`:''}</div></div>`;
+    }).join('');
+  });
+}
+
+function deleteNote(id){
+  if(!confirm('Delete this note?')) return;
+  apiFetch('/notes/'+id,{method:'DELETE'}).then(r=>r.json()).then(d=>{
+    showToast(d.success?'Note deleted':'Error: '+d.msg, d.success?'success':'danger');
+    if(d.success) loadNotesDashboard();
+  });
+}
+
+let toastTmr;
+function showToast(msg,type='info'){
+  let t=document.getElementById('gToast');
+  if(!t){t=document.createElement('div');t.id='gToast';t.style.cssText='position:fixed;bottom:22px;right:22px;padding:11px 18px;border-radius:10px;font-family:var(--fb);font-size:13px;font-weight:600;z-index:9999;transition:all .3s;transform:translateY(70px);opacity:0;box-shadow:0 8px 24px rgba(0,0,0,.4);color:#fff;';document.body.appendChild(t);}
+  const cols={info:'#4f8ef7',warning:'#f59e0b',danger:'#ef4444',success:'#22c55e'};
+  t.style.background=cols[type]||cols.info;t.textContent=msg;
+  t.style.transform='translateY(0)';t.style.opacity='1';
+  clearTimeout(toastTmr);toastTmr=setTimeout(()=>{t.style.transform='translateY(70px)';t.style.opacity='0';},3000);
+}
+
+// ── NOTE VIEWER ───────────────────────────────────────────
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+window.viewNote = function(noteId) {
+  const note = window._notesMap && window._notesMap[noteId];
+  if(!note){ showToast('Note not found','danger'); return; }
+  // Fetch content from server (attendance lock enforced server-side)
+  if(!note._content){
+    showToast('Loading...','info');
+    apiFetch('/notes/'+noteId+'/content').then(r=>r.json()).then(d=>{
+      if(!d.success){ showToast(d.msg||'Cannot open file','danger'); return; }
+      note._content = d.content;
+      if(d.filename) note.filename = d.filename;
+      openNoteViewerWith(note);
+    }).catch(()=>showToast('Failed to load file','danger'));
+    return;
+  }
+  openNoteViewerWith(note);
+};
+
+function openNoteViewerWith(note) {
+  const modal    = document.getElementById('noteViewerModal');
+  const body     = document.getElementById('noteViewerBody');
+  const title    = document.getElementById('noteViewerTitle');
+  const content  = note._content;
+  const filename = note.filename || 'file';
+  const ext      = filename.split('.').pop().toLowerCase();
+
+  title.textContent = filename;
+  modal.classList.add('open');
+  body.innerHTML = '';
+
+  // Block keyboard save shortcuts inside the viewer
+  body.onkeydown = function(e) {
+    if ((e.ctrlKey || e.metaKey) && ['s','p','a','c'].includes(e.key.toLowerCase())) {
+      e.preventDefault(); return false;
+    }
+  };
+
+  if (ext === 'pdf') {
+    // Render PDF using PDF.js directly on canvas — works for local file:// pages
+    body.innerHTML = `
+      <div id="pdfCanvasWrap" style="padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;overflow-y:auto;max-height:620px;">
+        <div id="pdfPageControls" style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;position:sticky;top:0;z-index:10;">
+          <button onclick="pdfPrevPage()" style="background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;padding:2px 6px;">‹</button>
+          <span id="pdfPageInfo" style="color:var(--muted);">Page 1</span>
+          <button onclick="pdfNextPage()" style="background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;padding:2px 6px;">›</button>
+        </div>
+        <canvas id="pdfCanvas" style="max-width:100%;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.5);user-select:none;" oncontextmenu="return false;"></canvas>
+      </div>`;
+
+    // Load PDF.js from CDN then render
+    if (!window.pdfjsLib) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        renderPDF(content);
+      };
+      document.head.appendChild(script);
+    } else {
+      renderPDF(content);
+    }
+
+  } else if (['png','jpg','jpeg','gif','webp','svg'].includes(ext)) {
+    body.innerHTML = `<div style="padding:20px;text-align:center;pointer-events:none;">
+      <img src="${content}" style="max-width:100%;max-height:70vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.4);pointer-events:none;" draggable="false">
+    </div>`;
+
+  } else if (['txt','md','csv'].includes(ext)) {
+    try {
+      const decoded = atob(content.split(',')[1]);
+      body.innerHTML = `<div style="padding:24px;font-size:13px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:#e8eaf0;font-family:'DM Mono',monospace;overflow:auto;max-height:600px;user-select:none;-webkit-user-select:none;">${escHtml(decoded)}</div>`;
+    } catch(e) {
+      body.innerHTML = `<div style="padding:24px;color:#e8eaf0;user-select:none;">${escHtml(content)}</div>`;
+    }
+
+  } else if (['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)) {
+    try {
+      const mime    = content.split(';')[0].split(':')[1];
+      const byteStr = atob(content.split(',')[1]);
+      const bytes   = new Uint8Array(byteStr.length);
+      for (let i=0;i<byteStr.length;i++) bytes[i]=byteStr.charCodeAt(i);
+      const blobUrl = URL.createObjectURL(new Blob([bytes],{type:mime}));
+      // Use sandbox to block downloads inside iframe
+      body.innerHTML = `<iframe src="${blobUrl}" style="width:100%;height:600px;border:none;" sandbox="allow-scripts allow-same-origin"></iframe>`;
+    } catch(e) {
+      body.innerHTML = noPreview(filename, 'fa-file-word');
+    }
+  } else {
+    body.innerHTML = noPreview(filename, 'fa-file');
+  }
+};
+
+function noPreview(filename, icon) {
+  return `<div style="padding:40px;text-align:center;color:#9ca3af;">
+    <i class="fas ${icon}" style="font-size:52px;margin-bottom:16px;display:block;color:var(--primary);"></i>
+    <p style="font-size:14px;font-weight:600;margin-bottom:8px;">${filename}</p>
+    <p style="font-size:12px;">This file type cannot be previewed.<br>Ask your faculty for an alternate format.</p>
+  </div>`;
+}
+
+// ── PDF.js renderer ───────────────────────────────────────
+let _pdfDoc = null, _pdfPage = 1;
+
+function renderPDF(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes  = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  pdfjsLib.getDocument({ data: bytes }).promise.then(pdf => {
+    _pdfDoc  = pdf;
+    _pdfPage = 1;
+    renderPDFPage(_pdfPage);
+  }).catch(() => {
+    const body = document.getElementById('noteViewerBody');
+    if (body) body.innerHTML = '<div style="padding:30px;text-align:center;color:#9ca3af;">Could not load PDF. Please try again.</div>';
+  });
+}
+
+function renderPDFPage(num) {
+  if (!_pdfDoc) return;
+  _pdfDoc.getPage(num).then(page => {
+    const canvas  = document.getElementById('pdfCanvas');
+    if (!canvas) return;
+    const wrap    = canvas.parentElement;
+    const maxW    = (wrap ? wrap.clientWidth : 760) - 32;
+    const vp0     = page.getViewport({ scale: 1 });
+    const scale   = Math.min(maxW / vp0.width, 2);
+    const vp      = page.getViewport({ scale });
+    canvas.width  = vp.width;
+    canvas.height = vp.height;
+    page.render({ canvasContext: canvas.getContext('2d'), viewport: vp });
+    const info = document.getElementById('pdfPageInfo');
+    if (info) info.textContent = `Page ${num} of ${_pdfDoc.numPages}`;
+  });
+}
+
+function pdfPrevPage() {
+  if (_pdfDoc && _pdfPage > 1) { _pdfPage--; renderPDFPage(_pdfPage); }
+}
+function pdfNextPage() {
+  if (_pdfDoc && _pdfPage < _pdfDoc.numPages) { _pdfPage++; renderPDFPage(_pdfPage); }
+}
+
+window.closeNoteViewer = function() {
+  _pdfDoc = null; _pdfPage = 1;
+  document.getElementById('noteViewerModal').classList.remove('open');
+  document.getElementById('noteViewerBody').innerHTML = '';
+};
+
+document.getElementById('noteViewerModal').addEventListener('click', function(e){
+  if(e.target===this) closeNoteViewer();
+});
+
+
+// ── PROFILE ──────────────────────────────────────────────
+function pRow(icon, label, value, color) {
+  return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;">
+    <i class="fas ${icon}" style="color:${color||'var(--primary)'};width:16px;text-align:center;font-size:13px;flex-shrink:0;"></i>
+    <div>
+      <div style="font-size:10.5px;color:var(--muted);font-weight:600;letter-spacing:.4px;">${label}</div>
+      <div style="font-size:13.5px;font-weight:600;margin-top:2px;">${value}</div>
+    </div>
+  </div>`;
+}
+
+function openProfile() {
+  const role  = localStorage.getItem('role');
+  const user  = localStorage.getItem('user');
+  const ud    = JSON.parse(localStorage.getItem('userData') || '{}');
+  document.getElementById('profileModal').classList.add('open');
+
+  // Always set name + avatar from localStorage first (fast)
+  const name = ud.full_name || user;
+  document.getElementById('profileFullName').textContent = name;
+  document.getElementById('profileRoleTag').textContent  = role + ' account';
+  document.getElementById('profileAvatarBig').textContent = name.charAt(0).toUpperCase();
+
+  if (role === 'student') {
+    document.getElementById('profileGraphs').style.display = 'block';
+    // Fetch full profile data (name, parent name) + attendance
+    Promise.all([
+      apiFetch('/profile/' + user).then(r => r.json()),
+      apiFetch('/student/data/' + user).then(r => r.json())
+    ]).then(([prof, data]) => {
+      const s = prof.stats || {};
+      const { attended, totals, messages } = data;
+      let tAtt = 0, tPos = 0;
+      for (const sub in totals) { tAtt += attended[sub] || 0; tPos += totals[sub] || 0; }
+      const pct = tPos > 0 ? Math.round(tAtt / tPos * 100) : 0;
+      const badge = getBadge(pct);
+
+      document.getElementById('profileFullName').textContent = s.name || name;
+      document.getElementById('profileAvatarBig').textContent = (s.name || name).charAt(0).toUpperCase();
+      document.getElementById('profileBadgeDisplay').textContent = pct>=90?'🥇':pct>=75?'🥈':pct>=60?'🥉':'';
+
+      document.getElementById('profileInfoRows').innerHTML =
+        pRow('fa-user',          'Full Name',          s.name || name) +
+        pRow('fa-id-badge',      'Student ID',         user,            'var(--cyan)') +
+        pRow('fa-users',         'Parent / Guardian',  '⏳ Loading...', 'var(--green)') +
+        pRow('fa-layer-group',   'Section',            ud.subject || s.section || '—', 'var(--yellow)') +
+        pRow('fa-chart-pie',     'Overall Attendance', pct + '%',       pct >= 75 ? 'var(--green)' : pct >= 60 ? 'var(--yellow)' : 'var(--red)') +
+        pRow('fa-calendar-check','Classes Attended',   tAtt + ' / ' + tPos) +
+        pRow('fa-award',         'Badge',              badge.text,      badge.c);
+
+      // Fetch parent name separately from parents table
+      apiFetch('/parent-of/' + user).then(r => r.json()).then(pd => {
+        const parentName = pd.parent_name || s.parent_name || '—';
+        const rows = document.getElementById('profileInfoRows');
+        if (rows) {
+          rows.innerHTML =
+            pRow('fa-user',          'Full Name',          s.name || name) +
+            pRow('fa-id-badge',      'Student ID',         user,            'var(--cyan)') +
+            pRow('fa-users',         'Parent / Guardian',  parentName,      'var(--green)') +
+            pRow('fa-layer-group',   'Section',            ud.subject || s.section || '—', 'var(--yellow)') +
+            pRow('fa-chart-pie',     'Overall Attendance', pct + '%',       pct >= 75 ? 'var(--green)' : pct >= 60 ? 'var(--yellow)' : 'var(--red)') +
+            pRow('fa-calendar-check','Classes Attended',   tAtt + ' / ' + tPos) +
+            pRow('fa-award',         'Badge',              badge.text,      badge.c);
+        }
+      }).catch(() => {});
+
+      // Alerts
+      const pa = document.getElementById('profileAlerts');
+      if (messages && messages.length) {
+        pa.innerHTML = messages.map(m => {
+          const cls = m.type === 'critical' ? 'critical' : m.type === 'motivation' ? 'motivation' : 'warning';
+          return `<div class="alert-item ${cls}"><i class="fas fa-bell"></i><span>${m.text}</span></div>`;
+        }).join('');
+      } else { pa.innerHTML = ''; }
+
+      // Charts
+      if (CH['semChart']) CH['semChart'].destroy();
+      CH['semChart'] = new Chart(document.getElementById('semChart'), {
+        type: 'doughnut',
+        data: { labels: ['Attended', 'Missed'], datasets: [{ data: [tAtt, tPos - tAtt], backgroundColor: ['#22c55e', '#ef4444'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af', font: { size: 10 } } } }, cutout: '60%' }
+      });
+      const subs = Object.keys(totals);
+      const colors = ['#4f8ef7','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4','#f97316','#ec4899','#14b8a6','#84cc16','#6366f1'];
+      if (CH['weekChart']) CH['weekChart'].destroy();
+      CH['weekChart'] = new Chart(document.getElementById('weekChart'), {
+        type: 'pie',
+        data: { labels: subs, datasets: [{ data: subs.map(s => attended[s] || 0), backgroundColor: colors.slice(0, subs.length), borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af', font: { size: 10 } } } } }
+      });
+    });
+
+  } else if (role === 'faculty') {
+    document.getElementById('profileGraphs').style.display = 'none';
+    apiFetch('/profile/' + user).then(r => r.json()).then(prof => {
+      const s = prof.stats || {};
+      document.getElementById('profileInfoRows').innerHTML =
+        pRow('fa-user',               'Full Name',          s.name || name) +
+        pRow('fa-chalkboard-teacher', 'Role',               'Faculty') +
+        pRow('fa-book',               'Assigned Subjects',  ud.subject || '—', 'var(--yellow)') +
+        pRow('fa-users',              'Students Enrolled',  s.students_enrolled || '—', 'var(--green)');
+      document.getElementById('profileAlerts').innerHTML = '';
+    });
+
+  } else if (role === 'parent') {
+    document.getElementById('profileGraphs').style.display = 'none';
+    document.getElementById('profileInfoRows').innerHTML =
+      pRow('fa-user',  'Role',            'Parent / Guardian') +
+      pRow('fa-child', 'Child Student ID', ud.child_username || '—', 'var(--cyan)');
+    document.getElementById('profileAlerts').innerHTML = '';
+
+  } else if (role === 'admin') {
+    document.getElementById('profileGraphs').style.display = 'none';
+    document.getElementById('profileInfoRows').innerHTML =
+      pRow('fa-user',       'Username',  user) +
+      pRow('fa-shield-alt', 'Role',      'System Administrator', 'var(--red)') +
+      pRow('fa-server',     'System',    'CampusConnect v2.0');
+    document.getElementById('profileAlerts').innerHTML = '';
+  }
+}
+
+function closeProfile() {
+  document.getElementById('profileModal').classList.remove('open');
+}
+
+// Close modal when clicking outside
+document.getElementById('profileModal').addEventListener('click', function(e) {
+  if (e.target === this) closeProfile();
+});
+
+// ── DATABASE MANAGER ─────────────────────────────────────
+window._dbCurrentTable = null;
+window._dbAllRows = [];
+window._dbEditingRow = null;
+
+function showAdminDb() {
+  document.getElementById('dbModal').classList.add('open');
+  loadDbTable('users');
+}
+
+function loadDbTable(table) {
+  window._dbCurrentTable = table;
+  // Highlight active tab
+  document.querySelectorAll('[id^="dbtab-"]').forEach(b => b.classList.remove('btn-primary'));
+  const tab = document.getElementById('dbtab-' + table);
+  if (tab) { tab.classList.remove('btn-secondary'); tab.classList.add('btn-primary'); }
+
+  document.getElementById('dbTableWrap').innerHTML =
+    '<div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+
+  apiFetch('/admin/db/' + table)
+  .then(r => r.json())
+  .then(d => {
+    window._dbAllRows = d.rows || [];
+    document.getElementById('dbRowCount').textContent = d.rows.length + ' rows';
+    renderDbTable(d.rows, d.columns);
+  })
+  .catch(() => {
+    document.getElementById('dbTableWrap').innerHTML =
+      '<div class="empty" style="color:var(--red)"><i class="fas fa-times"></i> Failed to load. Is app.py running?</div>';
+  });
+}
+
+function renderDbTable(rows, cols) {
+  if (!rows.length) {
+    document.getElementById('dbTableWrap').innerHTML =
+      '<div class="empty"><i class="fas fa-inbox"></i> No rows in this table</div>';
+    return;
+  }
+  const columns = cols || Object.keys(rows[0]);
+  // Hide content column in notes table (too large)
+  const displayCols = columns.filter(c => c !== 'content');
+
+  let html = `<table style="font-size:12.5px;">
+    <thead><tr>
+      ${displayCols.map(c => `<th style="white-space:nowrap">${c}</th>`).join('')}
+      <th>Actions</th>
+    </tr></thead><tbody>`;
+
+  rows.forEach((row, i) => {
+    html += `<tr>
+      ${displayCols.map(c => {
+        let val = row[c] !== null && row[c] !== undefined ? String(row[c]) : '—';
+        if (val.length > 40) val = val.slice(0, 40) + '…';
+        return `<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtmlDb(String(row[c]||''))}">${escHtmlDb(val)}</td>`;
+      }).join('')}
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-secondary" onclick="dbEditRow(${i})" style="margin-right:4px;"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="dbDeleteRow(${i})"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('dbTableWrap').innerHTML = html;
+}
+
+function dbFilterRows() {
+  const q = (document.getElementById('dbSearch').value || '').toLowerCase();
+  if (!q) { renderDbTable(window._dbAllRows); return; }
+  const filtered = window._dbAllRows.filter(row =>
+    Object.values(row).some(v => v !== null && String(v).toLowerCase().includes(q))
+  );
+  renderDbTable(filtered);
+}
+
+function dbEditRow(index) {
+  const row = window._dbAllRows[index];
+  window._dbEditingRow = { index, row };
+  document.getElementById('dbEditTitle').textContent = 'Edit Row — ' + window._dbCurrentTable;
+
+  const fields = Object.entries(row).map(([k, v]) => {
+    const isLarge = k === 'content';
+    return `<div class="igroup">
+      <label class="ilabel">${k}</label>
+      ${isLarge
+        ? `<textarea class="ifield" id="dbedit_${k}" rows="3" style="font-size:11px;">${escHtmlDb(String(v||''))}</textarea>`
+        : `<input class="ifield" id="dbedit_${k}" value="${escHtmlDb(String(v||''))}">`
+      }
+    </div>`;
+  }).join('');
+
+  document.getElementById('dbEditFields').innerHTML = fields;
+  document.getElementById('dbEditModal').classList.add('open');
+}
+
+function dbSaveRow() {
+  const { row } = window._dbEditingRow;
+  const updated = {};
+  Object.keys(row).forEach(k => {
+    const el = document.getElementById('dbedit_' + k);
+    updated[k] = el ? el.value : row[k];
+  });
+
+  apiFetch('/admin/db/' + window._dbCurrentTable + '/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ row: updated })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      showToast('Row updated successfully', 'success');
+      document.getElementById('dbEditModal').classList.remove('open');
+      loadDbTable(window._dbCurrentTable);
+    } else {
+      showToast(d.msg || 'Update failed', 'danger');
+    }
+  });
+}
+
+function dbDeleteRow(index) {
+  const row = window._dbAllRows[index];
+  if (!confirm('Delete this row? This cannot be undone.')) return;
+
+  apiFetch('/admin/db/' + window._dbCurrentTable + '/delete', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ row })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      showToast('Row deleted', 'success');
+      loadDbTable(window._dbCurrentTable);
+    } else {
+      showToast(d.msg || 'Delete failed', 'danger');
+    }
+  });
+}
+
+function dbAddRow() {
+  if (!window._dbCurrentTable) { showToast('Select a table first', 'danger'); return; }
+  const sample = window._dbAllRows[0];
+  if (!sample) { showToast('No schema to infer — table is empty', 'danger'); return; }
+
+  window._dbEditingRow = { index: -1, row: Object.fromEntries(Object.keys(sample).map(k => [k, ''])) };
+  document.getElementById('dbEditTitle').textContent = 'Add New Row — ' + window._dbCurrentTable;
+
+  const fields = Object.keys(sample).map(k =>
+    `<div class="igroup"><label class="ilabel">${k}</label><input class="ifield" id="dbedit_${k}" placeholder="${k}"></div>`
+  ).join('');
+  document.getElementById('dbEditFields').innerHTML = fields;
+  document.getElementById('dbEditModal').classList.add('open');
+
+  // Override save for insert
+  document.querySelector('#dbEditModal .btn-primary').onclick = function() {
+    const newRow = {};
+    Object.keys(sample).forEach(k => {
+      const el = document.getElementById('dbedit_' + k);
+      newRow[k] = el ? el.value : '';
+    });
+    apiFetch('/admin/db/' + window._dbCurrentTable + '/insert', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ row: newRow })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        showToast('Row added!', 'success');
+        document.getElementById('dbEditModal').classList.remove('open');
+        document.querySelector('#dbEditModal .btn-primary').onclick = dbSaveRow;
+        loadDbTable(window._dbCurrentTable);
+      } else showToast(d.msg || 'Insert failed', 'danger');
+    });
+  };
+}
+
+function escHtmlDb(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── MOBILE NAV ────────────────────────────────────────────
+function toggleMobileSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const isOpen   = sidebar && sidebar.classList.contains('mobile-open');
+  if (sidebar)  sidebar.classList.toggle('mobile-open', !isOpen);
+  if (overlay)  overlay.classList.toggle('visible', !isOpen);
+}
+
+function buildBottomNav(role) {
+  const nav = document.getElementById('bottomNav');
+  if (!nav) return;
+  const items = {
+    student: [
+      {i:'fa-th-large', l:'Home',     f:'null'},
+      {i:'fa-check-circle', l:'Attend', f:"document.getElementById('manualCode').scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-file-alt',  l:'Notes',   f:"document.getElementById('notesList').scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-comments',  l:'Chat',    f:"document.getElementById('chatInput').scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-user',      l:'Profile', f:'openProfile()'},
+    ],
+    faculty: [
+      {i:'fa-th-large',  l:'Home',    f:'null'},
+      {i:'fa-broadcast-tower', l:'Session', f:"document.getElementById('qrResult')&&document.getElementById('facSubjectSel').scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-user-edit', l:'Manual',  f:"document.getElementById('manualStudent').scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-upload',    l:'Upload',  f:"document.getElementById('facNoteFile').parentElement.scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-user',      l:'Profile', f:'openProfile()'},
+    ],
+    parent: [
+      {i:'fa-th-large',  l:'Home',    f:'null'},
+      {i:'fa-user',      l:'Profile', f:'openProfile()'},
+      {i:'fa-sign-out-alt', l:'Logout', f:'logout()', d:true},
+    ],
+    admin: [
+      {i:'fa-th-large',  l:'Home',    f:'null'},
+      {i:'fa-database',  l:'DB',      f:'showAdminDb()'},
+      {i:'fa-bullhorn',  l:'Alerts',  f:"document.getElementById('alertTarget').scrollIntoView({behavior:'smooth'})"},
+      {i:'fa-sign-out-alt', l:'Logout', f:'logout()', d:true},
+    ],
+  };
+  const list = items[role] || [];
+  nav.innerHTML = list.map((it,i) =>
+    `<button class="bnav-item${i===0?' active':''}${it.d?' danger':''}" onclick="${it.f==='null'?'window.scrollTo(0,0)':it.f}" style="${it.d?'color:var(--red)':''}">
+      <i class="fas ${it.i}"></i><span>${it.l}</span>
+    </button>`
+  ).join('');
+}
+
+// Close sidebar on nav item click (mobile)
+document.addEventListener('click', function(e) {
+  const navItem = e.target.closest('.nav-item');
+  const sidebar = document.getElementById('sidebar');
+  if (navItem && sidebar && sidebar.classList.contains('mobile-open')) {
+    toggleMobileSidebar();
+  }
+});
+
+// ── DARK / LIGHT MODE ─────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+
+// Apply saved theme on load
+(function applyTheme() {
+  if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light-mode');
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = '☀️';
+  }
+})();
+
+
+// apiFetch and logout defined in script.js
+
+(function init(){
+  const user=localStorage.getItem('user');
+  const role=localStorage.getItem('role');
+  const tok=localStorage.getItem('token');
+  const ud=JSON.parse(localStorage.getItem('userData')||'{}');
+  if(!user){location.href='index.html';return;}
+  // tok may be absent if using old server — gracefully continue
+
+  // Auto-logout after 30 min inactivity
+  let _idleTimer;
+  function resetIdle(){clearTimeout(_idleTimer);_idleTimer=setTimeout(()=>{showToast('Session expired due to inactivity','danger');setTimeout(()=>logout(),1500);},30*60*1000);}
+  ['mousemove','keydown','touchstart','click'].forEach(e=>document.addEventListener(e,resetIdle,{passive:true}));
+  resetIdle();
+
+  buildSidebar(role);
+  buildBottomNav(role);
+  document.getElementById('sidebarName').textContent=ud.full_name||user;
+  document.getElementById('sidebarRole').textContent=role;
+  document.getElementById('avatarInitial').textContent=(ud.full_name||user).charAt(0).toUpperCase();
+  document.getElementById('pageSubtitle').textContent='Welcome back, '+(ud.full_name||user);
+  const sec=document.getElementById('sec-'+role);
+  if(sec)sec.classList.add('visible');
+  if(role==='student'){
+    loadStudentDashboard(null,false);loadNotesDashboard();startChat();
+    apiFetch('/meta/subjects').then(r=>r.json()).then(subs=>{
+      const sel=document.getElementById('studentSubjectSel');
+      if(sel) sel.innerHTML=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+      const csel=document.getElementById('correctionSubjectSel');
+      if(csel) csel.innerHTML=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+    }).catch(()=>{});
+  }
+  else if(role==='faculty'){
+    loadFacultyDashboard();loadNotesDashboard();loadCorrectionRequests();loadFacultySessionHistory();
+    apiFetch('/meta/subjects').then(r=>r.json()).then(subs=>{
+      ['facSubjectSel','facSubjectSel2'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.innerHTML=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+      });
+    }).catch(()=>{});
+  }
+  else if(role==='parent'){
+    const child=ud.child_username;
+    if(child){document.getElementById('parentChildInfo').textContent='Tracking: '+child;loadStudentDashboard(child,true);}
+    else{document.getElementById('parentChildInfo').innerHTML='<span style="color:var(--red)">No child linked.</span>';}
+  }
+  else if(role==='admin'){loadAdminDashboard();}
+})();
+
+
+function openCorrectionModal(){document.getElementById('correctionModal').classList.add('open');}
+function submitCorrectionRequest(){
+  const subject=document.getElementById('correctionSubjectSel').value;
+  const date=document.getElementById('correctionDate').value;
+  const reason=document.getElementById('correctionReason').value.trim();
+  if(!subject||!date||!reason){showToast('Please fill all fields','danger');return;}
+  apiFetch('/correction-request',{method:'POST',body:JSON.stringify({subject,date,reason})})
+  .then(r=>r.json()).then(d=>{showToast(d.msg,'success');document.getElementById('correctionModal').classList.remove('open');document.getElementById('correctionReason').value='';});
+}
+
+function loadCorrectionRequests(){
+  const el=document.getElementById('correctionList'); if(!el)return;
+  apiFetch('/correction-requests').then(r=>r.json()).then(reqs=>{
+    const pending=reqs.filter(r=>r.status==='pending');
+    if(!pending.length){el.innerHTML='<div class="empty"><i class="fas fa-check-circle"></i>No pending requests</div>';return;}
+    el.innerHTML=pending.map(r=>`<div style="padding:10px 12px;background:var(--surface2);border-radius:9px;border:1px solid var(--border);margin-bottom:8px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-weight:600;font-size:13px;">${r.full_name} <span style="color:var(--muted);font-weight:400">(${r.student_username})</span></div><div style="font-size:12px;margin-top:2px;">📚 ${r.subject} &nbsp;📅 ${r.date}</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;">${r.reason}</div></div><div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px;"><button class="btn btn-sm btn-success" onclick="handleCorrection(${r.id},'approve')"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger" onclick="handleCorrection(${r.id},'reject')"><i class="fas fa-times"></i></button></div></div></div>`).join('');
+  });
+}
+
+function handleCorrection(rid,action){
+  apiFetch('/correction-request/'+rid,{method:'POST',body:JSON.stringify({action})})
+  .then(r=>r.json()).then(d=>{showToast(d.msg,'success');loadCorrectionRequests();});
+}
+
+function loadFacultySessionHistory(){
+  const el=document.getElementById('facultySessionHistory'); if(!el)return;
+  apiFetch('/faculty/session-history').then(r=>r.json()).then(d=>{
+    if(!d.length){el.innerHTML='<div class="empty">No sessions conducted yet</div>';return;}
+    el.innerHTML='<table><thead><tr><th>Subject</th><th>Sessions Conducted</th></tr></thead><tbody>'+d.map(r=>`<tr><td>${r.subject}</td><td><strong>${r.sessions}</strong></td></tr>`).join('')+'</tbody></table>';
+  });
+}
+
+function openChangePassword(){document.getElementById('changePwModal').classList.add('open');}
+function submitChangePassword(){
+  const old_pw=document.getElementById('oldPassword').value;
+  const new_pw=document.getElementById('newPassword').value;
+  const cnf_pw=document.getElementById('confirmPassword').value;
+  if(new_pw!==cnf_pw){showToast('New passwords do not match','danger');return;}
+  if(new_pw.length<6){showToast('Password must be at least 6 characters','danger');return;}
+  apiFetch('/change-password',{method:'POST',body:JSON.stringify({old_password:old_pw,new_password:new_pw})})
+  .then(r=>r.json()).then(d=>{showToast(d.msg,d.success?'success':'danger');if(d.success){document.getElementById('changePwModal').classList.remove('open');['oldPassword','newPassword','confirmPassword'].forEach(id=>document.getElementById(id).value='');}});
+}
+
+function openAddUser(){document.getElementById('addUserModal').classList.add('open');}
+function submitAddUser(){
+  const payload={username:document.getElementById('newUsername').value.trim(),password:document.getElementById('newUserPassword').value.trim()||'password',role:document.getElementById('newUserRole').value,full_name:document.getElementById('newUserFullName').value.trim(),subject:document.getElementById('newUserSubject').value.trim(),section:document.getElementById('newUserSection').value.trim(),child_username:document.getElementById('newUserChild').value.trim()};
+  if(!payload.username||!payload.full_name){showToast('Username and full name required','danger');return;}
+  apiFetch('/admin/add-user',{method:'POST',body:JSON.stringify(payload)}).then(r=>r.json()).then(d=>{showToast(d.msg,d.success?'success':'danger');if(d.success){document.getElementById('addUserModal').classList.remove('open');loadAdminDashboard();}});
+}
+
+
+function exportAttendanceCSV(){
+  const tok=localStorage.getItem('token');
+  const a=document.createElement('a');
+  a.href=API+'/admin/export/attendance-csv';
+  a.click();
+}
+
+function deleteChatMsg(id){
+  if(!confirm('Delete this message?'))return;
+  apiFetch('/chat/'+id,{method:'DELETE'}).then(r=>r.json()).then(d=>{if(d.success)loadChat();});
+}
+
+function toggleAddUserFields(){
+  const role=document.getElementById('newUserRole').value;
+  document.getElementById('auChildGrp').style.display=role==='parent'?'block':'none';
+  document.getElementById('auSubjectGrp').style.display=role==='faculty'?'block':'none';
+  document.getElementById('auSectionGrp').style.display=role==='student'?'block':'none';
+}
+
+// ── CHAT ─────────────────────────────────────────────────
+var _chatInterval = null;
+
+function startChat(){
+  loadChatMessages();
+  _chatInterval = setInterval(loadChatMessages, 4000);
+  window._chatInterval = _chatInterval;
+}
+
+function loadChatMessages(){
+  apiFetch('/chat').then(r=>r.json()).then(d=>{
+    const box = document.getElementById('chatContent');
+    if(!box || !d.messages) return;
+    const role = localStorage.getItem('role');
+    const user = localStorage.getItem('user');
+    const canDel = role==='faculty' || role==='admin';
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.innerHTML = d.messages.map(m=>{
+      const isMe = m.username === user;
+      return `<div class="chat-bubble${isMe?' me':''}" style="position:relative;margin-bottom:6px;padding:8px 12px;background:${isMe?'rgba(79,142,247,.15)':'var(--surface2)'};border-radius:10px;border:1px solid var(--border);font-size:13px;">
+        <strong style="font-size:11px;color:var(--primary)">${escHtml(m.username)}</strong>
+        <div style="margin-top:2px">${escHtml(m.message)}</div>
+        ${canDel?`<button onclick="deleteChatMsg(${m.id})" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;line-height:1;" title="Delete">✕</button>`:''}
+      </div>`;
+    }).join('');
+    if(atBottom) box.scrollTop = box.scrollHeight;
+  }).catch(()=>{});
+}
+
+function sendMessage(){
+  const input = document.getElementById('chatInput');
+  const txt = input?.value?.trim();
+  if(!txt) return;
+  const user = localStorage.getItem('user');
+  apiFetch('/chat',{method:'POST',body:JSON.stringify({username:user,message:txt})})
+  .then(()=>{ input.value=''; loadChatMessages(); });
+}
+
+function deleteChatMsg(id){
+  if(!confirm('Delete this message?')) return;
+  apiFetch('/chat/'+id,{method:'DELETE'}).then(r=>r.json()).then(d=>{ if(d.success) loadChatMessages(); });
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && document.activeElement?.id==='chatInput') sendMessage();
+});
+
+
+// ══════════════════════════════════════════════════════════
+//  AI FEATURES
+// ══════════════════════════════════════════════════════════
+
+// ── Student AI Chat ───────────────────────────────────────
+function sendAiMessage(){
+  const input = document.getElementById('aiChatInput');
+  const msg   = input?.value?.trim();
+  if(!msg) return;
+  input.value = '';
+  const btn = document.getElementById('aiSendBtn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+
+  const history = document.getElementById('aiChatHistory');
+  if(history){
+    history.innerHTML += `<div style="align-self:flex-end;background:rgba(79,142,247,.18);border-radius:12px 12px 2px 12px;padding:8px 12px;font-size:13px;max-width:85%">${escHtml(msg)}</div>`;
+    history.innerHTML += `<div id="aiTyping" style="align-self:flex-start;background:var(--surface2);border-radius:12px 12px 12px 2px;padding:8px 12px;font-size:13px;color:var(--muted)"><i class="fas fa-circle-notch fa-spin"></i> Thinking...</div>`;
+    history.scrollTop = history.scrollHeight;
+  }
+
+  const _aiUser = localStorage.getItem('user') || '';
+  apiFetch('/ai/chat', {method:'POST', body:JSON.stringify({message:msg, username:_aiUser})})
+  .then(r=>r.json()).then(d=>{
+    const typing = document.getElementById('aiTyping');
+    if(typing) typing.remove();
+    if(history){
+      const ans = d.success ? d.answer : (d.msg || 'Sorry, AI is unavailable right now.');
+      history.innerHTML += `<div style="align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:12px 12px 12px 2px;padding:8px 12px;font-size:13px;max-width:90%;line-height:1.5">${escHtml(ans)}</div>`;
+      history.scrollTop = history.scrollHeight;
+    }
+  }).catch(()=>{
+    const typing = document.getElementById('aiTyping');
+    if(typing) typing.remove();
+    if(history) history.innerHTML += `<div style="align-self:flex-start;color:#ef4444;font-size:12px;padding:4px 8px">AI unavailable — is the server running?</div>`;
+  }).finally(()=>{
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i>'; }
+  });
+}
+
+// ── At-Risk Scanner (faculty + admin) ────────────────────
+function runAiAtRisk(){
+  const btnId   = localStorage.getItem('role')==='admin' ? 'adminAtRiskBtn' : 'atRiskBtn';
+  const resultId= localStorage.getItem('role')==='admin' ? 'adminAtRiskResults' : 'atRiskResults';
+  const btn     = document.getElementById(btnId);
+  const results = document.getElementById(resultId);
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Scanning...'; }
+  if(results) results.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i> AI is analysing all students...</div>';
+
+  apiFetch('/ai/atrisk').then(r=>r.json()).then(d=>{
+    if(!results) return;
+    if(!d.success){ results.innerHTML=`<div style="color:#ef4444;font-size:13px">${d.msg||'Error'}</div>`; return; }
+
+    if(!d.alerts || !d.alerts.length){
+      results.innerHTML=`<div style="padding:12px;background:rgba(34,197,94,.1);border-radius:10px;border:1px solid rgba(34,197,94,.3);font-size:13px;color:#22c55e"><i class="fas fa-check-circle"></i> ${d.summary}</div>`;
+      return;
+    }
+
+    results.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;letter-spacing:.6px">
+        ⚠️ ${d.at_risk_count} AT-RISK STUDENTS DETECTED
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
+        ${d.alerts.map(a=>`
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:10px;">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px">
+                ID ${escHtml(String(a.username))}
+              </div>
+              <div style="font-size:12.5px;color:var(--muted);line-height:1.4">${escHtml(a.message)}</div>
+            </div>
+            <button onclick="sendAiAlert('${a.username}',${JSON.stringify(a.message).replace(/'/g,'\x27')})"
+              style="flex-shrink:0;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;white-space:nowrap">
+              <i class="fas fa-bell"></i> Send
+            </button>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-danger btn-full" style="margin-top:12px" onclick="sendAllAiAlerts(${JSON.stringify(d.alerts).replace(/'/g,'\x27')})">
+        <i class="fas fa-broadcast-tower"></i> Send All ${d.at_risk_count} Alerts
+      </button>`;
+  }).catch(()=>{
+    if(results) results.innerHTML='<div style="color:#ef4444;font-size:13px">AI scan failed — check server</div>';
+  }).finally(()=>{
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-search"></i> Scan At-Risk Students'; }
+  });
+}
+
+function sendAiAlert(username, message){
+  apiFetch('/admin/send-alert',{method:'POST',body:JSON.stringify({student:username,message,type:'warning'})})
+  .then(()=>showToast('Alert sent to student '+username,'success'));
+}
+
+function sendAllAiAlerts(alerts){
+  if(!confirm('Send personalised AI alerts to all '+alerts.length+' at-risk students?')) return;
+  let sent = 0;
+  alerts.forEach(a=>{
+    apiFetch('/admin/send-alert',{method:'POST',body:JSON.stringify({student:a.username,message:a.message,type:'warning'})})
+    .then(()=>{ sent++; if(sent===alerts.length) showToast('All '+sent+' alerts sent!','success'); });
+  });
+}
+
+// ── AI Progress Report (faculty/admin row button) ─────────
+function generateAiReport(username, name){
+  const btn = document.getElementById('aiReportBtn_'+username);
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+
+  apiFetch('/ai/progress-report/'+username).then(r=>r.json()).then(d=>{
+    if(!d.success){ showToast(d.msg||'Report failed','danger'); return; }
+
+    // Show in a modal-style overlay
+    let overlay = document.getElementById('aiReportOverlay');
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'aiReportOverlay';
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+      overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-family:var(--fh);font-size:16px;font-weight:700"><i class="fas fa-robot" style="color:var(--primary);margin-right:8px"></i>AI Progress Report</div>
+          <button onclick="document.getElementById('aiReportOverlay').remove()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px">${escHtml(d.student)} — Overall: ${d.overall}%</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13.5px;line-height:1.7;color:var(--text)">${escHtml(d.report)}</div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(${JSON.stringify(d.report).replace(/'/g,'\x27')}).then(()=>showToast('Copied!','success'))"><i class="fas fa-copy"></i> Copy</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('aiReportOverlay').remove()">Close</button>
+        </div>
+      </div>`;
+  }).catch(()=>showToast('AI report failed','danger'))
+  .finally(()=>{ if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-robot"></i>'; }});
+}
+
+// ── Admin: Save Gemini API Key ────────────────────────────
+function saveAiKey(provider){
+  const inputId = provider === 'gemini' ? 'geminiKeyInput' : provider === 'groq' ? 'groqKeyInput' : 'openrouterKeyInput';
+  const key = document.getElementById(inputId)?.value?.trim();
+  if(!key){ showToast('Paste your ' + provider + ' API key first','danger'); return; }
+  apiFetch('/ai/key',{method:'POST',body:JSON.stringify({key, provider})})
+  .then(r=>r.json()).then(d=>{
+    showToast(d.msg, d.success?'success':'danger');
+    if(d.success) document.getElementById(inputId).value='';
+  });
+}
+// Keep old name for compatibility
+function saveGeminiKey(){ saveAiKey('gemini'); }
+
+</script>
+</body>
+</html>

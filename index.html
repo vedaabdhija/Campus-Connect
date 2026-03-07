@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CampusConnect — Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="login-wrapper">
+  <div class="login-card">
+
+    <div class="card-header-login">
+      <div style="width:52px;height:52px;background:var(--primary);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;color:white;">🎓</div>
+      <h1>CampusConnect</h1>
+      <p>Secure Attendance Portal</p>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginBox">
+      <div class="input-group">
+        <label>Role</label>
+        <select id="role">
+          <option value="student">👨‍🎓 Student</option>
+          <option value="faculty">👨‍🏫 Faculty</option>
+          <option value="parent">👨‍👩‍👧 Parent</option>
+          <option value="admin">👨‍💼 Admin</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Username</label>
+        <input id="username" placeholder="Enter your username" autocomplete="off">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Enter your password">
+      </div>
+      <button onclick="login()">Log In →</button>
+      <p class="link" onclick="showRegister()">New user? Create an account</p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerBox" style="display:none">
+      <div class="input-group">
+        <label>I am a...</label>
+        <select id="regRole">
+          <option value="student">Student</option>
+          <option value="faculty">Faculty</option>
+          <option value="parent">Parent</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Username</label>
+        <input id="regUsername" placeholder="Choose a username" autocomplete="off">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input id="regPassword" type="password" placeholder="Choose a password">
+      </div>
+      <button onclick="register()">Create Account →</button>
+      <p class="link" onclick="showLogin()">← Back to login</p>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
