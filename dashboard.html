@@ -274,7 +274,7 @@
       .btn-sm{padding:8px 11px;font-size:11.5px;}
 
       /* Inputs — bigger for touch */
-      .ifield{padding:12px 12px;font-size:16px !important;border-radius:9px;-webkit-appearance:none;appearance:none;}
+      .ifield{padding:12px 12px;font-size:16px !important;border-radius:9px;-webkit-appearance:none;}
       select.ifield{padding:11px 12px;}
       textarea.ifield{font-size:14px !important;}
 
@@ -1017,18 +1017,20 @@ function generateQR(){
   apiFetch('/generate-qr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:subj})})
   .then(r=>r.json())
   .then(d=>{
-    // Show the QR result area
-    const qrResult = document.getElementById('qrResult');
-    if(qrResult) qrResult.style.display='block';
+    if(!d.success){ showToast(d.msg||'Failed to start session','danger'); return; }
 
-    // Show captcha code
-    const txtCode = document.getElementById('txtCode');
+    // Show the QR result area (correct element ID: qrDisplay)
+    const qrDisplay = document.getElementById('qrDisplay');
+    if(qrDisplay) qrDisplay.style.display='block';
+
+    // Show captcha code (correct element ID: qrCodeText)
+    const txtCode = document.getElementById('qrCodeText');
     if(txtCode) txtCode.textContent = d.code;
 
-    // Generate QR image via qrserver API
-    const qrBox = document.getElementById('qrBox');
+    // Generate QR image via qrserver API (correct element ID: qrCode)
+    const qrBox = document.getElementById('qrCode');
     const qrData = encodeURIComponent(subj+'|'+d.code);
-    if(qrBox) qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}" style="display:block;border-radius:8px;">`;
+    if(qrBox) qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}" style="display:block;border-radius:8px;margin:0 auto;">`;
 
     // 5-minute countdown timer
     let secs = 300;
@@ -1048,7 +1050,7 @@ function generateQR(){
 
     showToast('Session started for '+subj+' (5 min)', 'success');
   })
-  .catch(()=>showToast('Could not reach server. Is app.py running?','danger'));
+  .catch(()=>showToast('Could not start session','danger'));
 }
 
 function updateQrTimer(secs){
