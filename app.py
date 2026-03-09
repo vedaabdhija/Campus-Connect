@@ -5,8 +5,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io, base64, json, re, urllib.request
+import os as _os
 
-# Explicitly tell Flask where files are — critical for Render deployment
+# Render deployment path detection
 _HERE = _os.path.dirname(_os.path.abspath(__file__))
 app = Flask(__name__, static_folder=_HERE, template_folder=_HERE)
 CORS(app, origins="*", allow_headers=["Content-Type","X-Token","Authorization"], methods=["GET","POST","PUT","DELETE","OPTIONS"], supports_credentials=False)
@@ -1473,29 +1474,39 @@ def set_ai_key():
 # ── SERVE STATIC FILES (open via http://127.0.0.1:5000) ──
 import os as _os
 # Robust base directory — works locally and on Render/cloud
-_BASE = _HERE  # same as Flask static_folder
+_BASE = _HERE
 print(f"[BOOT] Base dir: {_BASE}", flush=True)
 print(f"[BOOT] Files: {_os.listdir(_BASE)}", flush=True)
 
 @app.route("/")
 def serve_root():
-    # Try multiple possible locations
-    for base in [_BASE, _os.getcwd(), _os.path.dirname(_os.getcwd())]:
-        idx = _os.path.join(base, "index.html")
-        if _os.path.exists(idx):
-            print(f"[SERVE] Serving index.html from {base}", flush=True)
-            return send_from_directory(base, "index.html")
-    # Debug info if still not found
-    import glob
-    html_files = glob.glob("/**/*.html", recursive=True)[:10]
-    return f"<h2>index.html not found</h2><p>CWD: {_os.getcwd()}</p><p>BASE: {_BASE}</p><p>HTML files found: {html_files}</p>", 404
+    return _serve_file("index.html")
+
+
 
 def _serve_file(filename):
-    for base in [_BASE, _os.getcwd()]:
+    # Check all possible locations including Render's deployment path
+    search_paths = [
+        _BASE,
+        _os.getcwd(),
+        '/opt/render/project/src',
+        _os.path.dirname(_BASE),
+    ]
+    for base in search_paths:
         fp = _os.path.join(base, filename)
         if _os.path.exists(fp):
+            print(f"[FILE] Serving {filename} from {base}", flush=True)
             return send_from_directory(base, filename)
-    return f"{filename} not found", 404
+    # Show debug info
+    all_files = []
+    for p in search_paths:
+        try:
+            all_files += [f"{p}/{f}" for f in _os.listdir(p)]
+        except:
+            pass
+    print(f"[FILE] {filename} not found. Files: {all_files[:20]}", flush=True)
+    return f"{filename} not found. Searched: {search_paths}", 404
+
 
 @app.route("/dashboard")
 def serve_dashboard():
