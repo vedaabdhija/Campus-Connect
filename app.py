@@ -20,8 +20,10 @@ def add_headers(r):
     return r
 
 
-DB_FILE   = "database.db"
-NOTES_DIR = "notes_files"          # files stored on disk, not in DB
+# Use absolute paths so files are always found on Render
+_APP_DIR  = os.path.dirname(os.path.abspath(__file__))
+DB_FILE   = os.path.join(_APP_DIR, "database.db")
+NOTES_DIR = os.path.join(_APP_DIR, "notes_files")
 os.makedirs(NOTES_DIR, exist_ok=True)
 
 # ── NO-CACHE HEADERS ─────────────────────────────────────
@@ -309,26 +311,37 @@ def _call_openrouter(prompt: str, system: str = "") -> str:
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    payload = json.dumps({
-        "model": "meta-llama/llama-3.3-70b-instruct:free",
-        "messages": messages,
-        "max_tokens": 600,
-        "temperature": 0.7
-    }).encode()
-    req = urllib.request.Request(url, data=payload, headers={
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "http://127.0.0.1:5000",
-        "X-Title": "CampusConnect"
-    }, method="POST")
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        data = json.loads(resp.read())
-        # OpenRouter returns error in content for free models sometimes
-        result = data["choices"][0]["message"]["content"]
-        if not result or result.strip() == "":
-            raise Exception("Empty response from OpenRouter")
-        print(f"[AI] OpenRouter SUCCESS ✓", flush=True)
-        return result.strip()
+    free_models = [
+        "meta-llama/llama-3.1-8b-instruct:free",
+        "mistralai/mistral-7b-instruct:free",
+        "google/gemma-3-1b-it:free",
+        "qwen/qwen-2-7b-instruct:free",
+    ]
+    last_or_err = None
+    for or_model in free_models:
+        try:
+            payload = json.dumps({
+                "model": or_model,
+                "messages": messages,
+                "max_tokens": 600,
+                "temperature": 0.7
+            }).encode()
+            req = urllib.request.Request(url, data=payload, headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "HTTP-Referer": "https://campus-connect-47i2.onrender.com",
+                "X-Title": "CampusConnect"
+            })
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = json.loads(resp.read().decode())
+            result = data["choices"][0]["message"]["content"]
+            print(f"[AI] OpenRouter success with {or_model}", flush=True)
+            return result.strip()
+        except Exception as e:
+            print(f"[AI] OpenRouter {or_model} failed: {str(e)[:80]}", flush=True)
+            last_or_err = e
+            continue
+    raise Exception(f"All OpenRouter free models failed: {last_or_err}")
 
 
 def _call_groq(prompt: str, system: str = "") -> str:
@@ -356,7 +369,7 @@ def _call_groq(prompt: str, system: str = "") -> str:
 
 def _call_gemini(prompt: str, system: str = "") -> str:
     """Call Gemini API. Raises on failure."""
-    models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
+    models = ["gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash"]
     print(f"[AI] Trying Gemini models: {models}", flush=True)
     full_prompt = (system + "\n\n" + prompt).strip() if system else prompt
     last_err = None
@@ -590,15 +603,19 @@ def gen():
                      (subject, code, now, faculty))
 
         if sess_expired:
+            # Increment total class count
             row = conn.execute("SELECT total_classes FROM subject_totals WHERE subject=?", (subject,)).fetchone()
             if row:
                 conn.execute("UPDATE subject_totals SET total_classes=total_classes+1 WHERE subject=?", (subject,))
             else:
                 conn.execute("INSERT INTO subject_totals (subject,total_classes) VALUES (?,1)", (subject,))
-            # Log faculty session history
+            # Log faculty session history with date
+            today = datetime.date.today().isoformat()
             conn.execute("INSERT INTO faculty_sessions (faculty,subject,timestamp) VALUES (?,?,?)",
                          (faculty, subject, now))
         conn.commit()
+
+    print(f"[SESSION] {faculty} started {subject} | new_session={sess_expired} | code={code}", flush=True)
 
     return jsonify(success=True, code=code, subject=subject)
 
@@ -818,18 +835,27 @@ def notes_handler():
         except Exception:
             return jsonify(success=False, msg="Invalid file data")
 
-        # Save to disk
+        # Save to disk (local) AND DB blob (cloud/Render)
         safe_name = f"{int(time.time())}_{secrets.token_hex(4)}_{filename}"
         fpath     = os.path.join(NOTES_DIR, safe_name)
-        with open(fpath, "wb") as f:
-            f.write(raw)
+        try:
+            os.makedirs(NOTES_DIR, exist_ok=True)
+            with open(fpath, "wb") as f_out:
+                f_out.write(raw)
+        except Exception as disk_err:
+            print(f"[NOTES] Disk save failed (OK on cloud): {disk_err}", flush=True)
+            fpath = safe_name
 
         with get_db() as conn:
-            conn.execute(
+            conn.execute("CREATE TABLE IF NOT EXISTS notes_data (note_id INTEGER PRIMARY KEY, content BLOB)")
+            cur = conn.execute(
                 "INSERT INTO notes (uploader,subject,filepath,filename,type,category,timestamp) VALUES (?,?,?,?,?,?,?)",
                 (td["username"], d.get("subject"), fpath, filename, d.get("type","file"), d.get("category","note"), time.time())
             )
+            note_id = cur.lastrowid
+            conn.execute("INSERT INTO notes_data (note_id, content) VALUES (?,?)", (note_id, raw))
             conn.commit()
+        print(f"[NOTES] Saved {filename} ({len(raw)} bytes) note_id={note_id}", flush=True)
         return jsonify(success=True)
 
     else:
@@ -883,11 +909,22 @@ def note_content(nid):
             if t > 0 and (a/t*100) < 60:
                 return jsonify(success=False, msg="Attendance < 60%"), 403
 
-        if not note["filepath"] or not os.path.exists(note["filepath"]):
-            return jsonify(success=False, msg="File not found on server"), 404
-
-        with open(note["filepath"], "rb") as f:
-            raw = f.read()
+        # Try disk first, fall back to DB blob (needed on Render cloud)
+        raw = None
+        if note["filepath"] and os.path.exists(note["filepath"]):
+            with open(note["filepath"], "rb") as f:
+                raw = f.read()
+        else:
+            # Try reading from DB blob
+            try:
+                conn.execute("CREATE TABLE IF NOT EXISTS notes_data (note_id INTEGER PRIMARY KEY, content BLOB)")
+                blob_row = conn.execute("SELECT content FROM notes_data WHERE note_id=?", (nid,)).fetchone()
+                if blob_row and blob_row["content"]:
+                    raw = bytes(blob_row["content"])
+            except Exception as e:
+                print(f"[NOTES] DB blob read error: {e}", flush=True)
+        if not raw:
+            return jsonify(success=False, msg="File not found. It may have been lost after a server restart. Please ask faculty to re-upload."), 404
         ext      = os.path.splitext(note["filename"])[1].lower()
         mime_map = {".pdf":"application/pdf",".png":"image/png",".jpg":"image/jpeg",
                     ".jpeg":"image/jpeg",".gif":"image/gif",".txt":"text/plain",".csv":"text/csv"}
@@ -1228,7 +1265,22 @@ def export_attendance_csv():
 @app.route("/visualize/<username>")
 @require_role()
 def visualize(username):
-    return jsonify(image=None)
+    """Return attendance data as JSON for Chart.js (no matplotlib needed)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT subject, COUNT(*) as attended FROM attendance WHERE student_username=? GROUP BY subject",
+            (username,)
+        ).fetchall()
+        totals = conn.execute(
+            "SELECT subject, total_classes FROM subject_totals"
+        ).fetchall()
+        tot_map = {r["subject"]: r["total_classes"] for r in totals}
+        labels, attended, total = [], [], []
+        for r in rows:
+            labels.append(r["subject"])
+            attended.append(r["attended"])
+            total.append(tot_map.get(r["subject"], r["attended"]))
+    return jsonify(image=None, labels=labels, attended=attended, total=total)
 
 @app.route("/visualize/semester/<username>")
 @require_role()

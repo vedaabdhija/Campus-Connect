@@ -1039,14 +1039,15 @@ function generateQR(){
     _qrInterval = setInterval(()=>{
       secs--;
       updateQrTimer(secs);
-      if(secs <= 0){
+      isecs <= 0){
         clearInterval(_qrInterval);
-        if(qrBox) qrBox.innerHTML = '<p style="color:var(--red);font-weight:700;padding:16px;">⏰ Session Expired</p>';
-        if(txtCode) txtCode.textContent = '------';
+        const qrBoxExp = document.getElementById('qrCode');
+        const txtExp   = document.getElementById('qrCodeText');
+        if(qrBoxExp) qrBoxExp.innerHTML = '<p style="color:var(--red);font-weight:700;padding:16px;">⏰ Session Expired</p>';
+        if(txtExp)   txtExp.textContent = '------';
         const t = document.getElementById('qrTimer');
         if(t) t.textContent = 'Session ended — generate a new one';
-      }
-    }, 1000);
+      }, 1000);
 
     showToast('Session started for '+subj+' (5 min)', 'success');
   })
@@ -1140,7 +1141,7 @@ window.submitCode = function(scannedText) {
 
 window.manualMark=function(){
   const student = document.getElementById('manualStudent').value.trim();
-  const subject = (document.getElementById('manualSubjectSel')||{value:''}).value;
+  const subject = (document.getElementById('facSubjectSel2')||document.getElementById('manualSubjectSel')||{value:''}).value;
   const res     = document.getElementById('manualMarkResult');
   if(!student){ showToast('Enter a Student ID','danger'); return; }
   if(!subject){ showToast('Select a subject first','danger'); return; }
@@ -1824,7 +1825,7 @@ function submitCorrectionRequest(){
   const date=document.getElementById('correctionDate').value;
   const reason=document.getElementById('correctionReason').value.trim();
   if(!subject||!date||!reason){showToast('Please fill all fields','danger');return;}
-  apiFetch('/correction-request',{method:'POST',body:JSON.stringify({subject,date,reason})})
+  apiFetch('/correction-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject,date,reason})})
   .then(r=>r.json()).then(d=>{showToast(d.msg,'success');document.getElementById('correctionModal').classList.remove('open');document.getElementById('correctionReason').value='';});
 }
 
