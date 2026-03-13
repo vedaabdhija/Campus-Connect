@@ -762,7 +762,8 @@ def student_data(username):
     td = request.token_data
     # Only enforce ownership check if a real verified token is present
     tok = request.headers.get("X-Token", "")
-    is_verified = tok and tok not in ("", "undefined", "null") and _tokens.get(tok)
+    # Use verify_token result (checks both memory and DB) not raw _tokens dict
+    is_verified = tok and tok not in ("", "undefined", "null") and td is not None
     if is_verified and td["role"] == "student" and td["username"] != username:
         return jsonify(success=False, msg="Forbidden"), 403
 

@@ -107,6 +107,11 @@ function stopCamera() {
   if (modal) modal.classList.remove('open');
 }
 
+// Global unhandled promise rejection handler
+window.addEventListener('unhandledrejection', function(e){
+  console.error('Unhandled promise rejection:', e.reason);
+});
+
 // Enter key on login form
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement?.closest?.('#loginBox')) login();
