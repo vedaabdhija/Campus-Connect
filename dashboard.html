@@ -1031,7 +1031,7 @@ const CHARTOPTS=(extra={})=>({responsive:true,maintainAspectRatio:false,plugins:
 
 function loadStudentDashboard(targetUser,isParent){
   const user=targetUser||localStorage.getItem('user');
-  apiFetch('/student/data/'+user+'?t='+Date.now()).then(r=>r.json()).then(data=>{ try {
+  apiFetch('/student/data/'+user+'?t='+Date.now()).then(r=>r.json()).then(data=>{
     if(!data || !data.totals){ console.error('No data returned for student:', user, data); return; }
     const{attended,totals,messages}=data;
     const subs=Object.keys(totals);
@@ -1079,13 +1079,12 @@ function loadStudentDashboard(targetUser,isParent){
         pa.innerHTML='<div class="empty"><i class="fas fa-check-circle"></i>No alerts for your child</div>';
       }
     }
-  } catch(e){ console.error("Student dash error:",e); }
-  }).catch(e=>{ console.error("Student data fetch failed:",e); });
+  }).catch(e=>{ console.error('Student data fetch error:',e); });
 }
 
 let adminData=[];
 function loadAdminDashboard(){
-  apiFetch('/admin/stats').then(r=>r.json()).then(d=>{ try {
+  apiFetch('/admin/stats').then(r=>r.json()).then(d=>{
     document.getElementById('adminStatCards').innerHTML=
       sc('👥','Total Users',d.users,'registered accounts','rgba(79,142,247,.12)')+
       sc('✅','Attendance Records',d.attendance,'entries logged','rgba(34,197,94,.12)')+
@@ -1178,7 +1177,7 @@ function generateQR(){
     _qrInterval = setInterval(()=>{
       secs--;
       updateQrTimer(secs);
-      isecs <= 0){
+      if(secs <= 0){
         clearInterval(_qrInterval);
         const qrBoxExp = document.getElementById('qrCode');
         const txtExp   = document.getElementById('qrCodeText');
@@ -1186,7 +1185,8 @@ function generateQR(){
         if(txtExp)   txtExp.textContent = '------';
         const t = document.getElementById('qrTimer');
         if(t) t.textContent = 'Session ended — generate a new one';
-      }, 1000);
+      }
+    }, 1000);
 
     showToast('Session started for '+subj+' (5 min)', 'success');
   })
