@@ -11,10 +11,21 @@ function apiFetch(path, opts={}) {
     (tok && tok !== 'undefined' && tok !== 'null') ? {'X-Token': tok} : {},
     opts.headers || {}
   );
-  return fetch(API + path, opts).catch(err => {
-    console.warn('apiFetch error:', path, err.message);
-    return new Response('{}', {status: 200, headers: {'Content-Type': 'application/json'}});
-  });
+  return fetch(API + path, opts)
+    .then(resp => {
+      // If 401/403, token expired — redirect to login
+      if(resp.status === 401) {
+        console.warn('Session expired, redirecting to login');
+        localStorage.clear();
+        window.location.href = '/';
+        return new Response('{}', {status: 401});
+      }
+      return resp;
+    })
+    .catch(err => {
+      console.warn('apiFetch network error:', path, err.message);
+      return new Response('{}', {status: 200, headers: {'Content-Type': 'application/json'}});
+    });
 }
 
 // ── Login ─────────────────────────────────────────────

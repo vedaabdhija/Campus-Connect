@@ -367,6 +367,13 @@
     <div style="height:100%;background:#4f8ef7;border-radius:2px;animation:loadbar 1.5s ease-in-out infinite;" id="loadBar"></div>
   </div>
 </div>
+<script>
+// Failsafe: hide loading screen after 6 seconds no matter what
+setTimeout(function(){
+  var ls = document.getElementById('loadingScreen');
+  if(ls) ls.style.display = 'none';
+}, 6000);
+</script>
 <style>
 @keyframes loadbar{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
 </style>
@@ -845,7 +852,128 @@
   </div>
 </div>
 
-<script src="script.js"></script>
+<script>
+/* script.js inlined */
+/* CampusConnect — script.js */
+
+// When served via Flask (http://), API is same origin. When file://, use explicit host.
+const API = (location.protocol === 'file:') ? 'http://127.0.0.1:5000' : '';
+
+// ── Token-aware fetch ─────────────────────────────────
+function apiFetch(path, opts={}) {
+  const tok = localStorage.getItem('token');
+  opts.headers = Object.assign(
+    {'Content-Type': 'application/json'},
+    (tok && tok !== 'undefined' && tok !== 'null') ? {'X-Token': tok} : {},
+    opts.headers || {}
+  );
+  return fetch(API + path, opts).catch(err => {
+    console.warn('apiFetch error:', path, err.message);
+    return new Response('{}', {status: 200, headers: {'Content-Type': 'application/json'}});
+  });
+}
+
+// ── Login ─────────────────────────────────────────────
+function login() {
+  const u = document.getElementById('username')?.value.trim();
+  const p = document.getElementById('password')?.value;
+  const r = document.getElementById('role')?.value;
+  if (!u || !p) { showToast('Enter username and password', 'error'); return; }
+  const btn = document.querySelector('#loginBox .btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Logging in…'; }
+
+  fetch(API + '/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username: u, password: p, role: r})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      localStorage.setItem('user',     d.user.username);
+      localStorage.setItem('role',     d.user.role);
+      localStorage.setItem('userData', JSON.stringify(d.user));
+      if (d.token) localStorage.setItem('token', d.token);
+      // Redirect to dashboard — works for both file:// and http://
+      location.href = (location.protocol === 'file:') ? 'dashboard.html' : '/dashboard';
+    } else {
+      showToast(d.msg || 'Invalid credentials', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Login'; }
+    }
+  })
+  .catch(() => {
+    showToast('Cannot reach server — make sure app.py is running', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Login'; }
+  });
+}
+
+function register() { showToast('Self-registration is disabled. Contact admin.', 'error'); }
+
+function logout() {
+  if (window._chatInterval) clearInterval(window._chatInterval);
+  localStorage.clear();
+  location.href = (location.protocol === 'file:') ? 'index.html' : '/';
+}
+
+function showRegister() {
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('registerBox').style.display = 'block';
+}
+function showLogin() {
+  document.getElementById('registerBox').style.display = 'none';
+  document.getElementById('loginBox').style.display = 'block';
+}
+
+// ── Toast ─────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type='info') {
+  let t = document.getElementById('gToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'gToast';
+    t.style.cssText = 'position:fixed;bottom:22px;right:22px;padding:11px 18px;border-radius:10px;' +
+      'font-size:13px;font-weight:600;z-index:9999;transition:all .3s;' +
+      'transform:translateY(70px);opacity:0;box-shadow:0 8px 24px rgba(0,0,0,.4);color:#fff;max-width:320px;';
+    document.body.appendChild(t);
+  }
+  const cols = {info:'#4f8ef7', warning:'#f59e0b', error:'#ef4444', danger:'#ef4444', success:'#22c55e'};
+  t.style.background = cols[type] || cols.info;
+  t.textContent = msg;
+  t.style.transform = 'translateY(0)'; t.style.opacity = '1';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.transform = 'translateY(70px)'; t.style.opacity = '0'; }, 3500);
+}
+
+// ── QR Camera ─────────────────────────────────────────
+let _qrScanner = null;
+function startCameraScan() {
+  const modal = document.getElementById('cameraModal');
+  if (modal) modal.classList.add('open');
+  if (typeof Html5Qrcode === 'undefined') { showToast('QR scanner not loaded', 'error'); return; }
+  _qrScanner = new Html5Qrcode('reader');
+  _qrScanner.start(
+    {facingMode: 'environment'}, {fps: 10, qrbox: {width: 250, height: 250}},
+    (text) => { stopCamera(); if (typeof submitCode === 'function') submitCode(text); },
+    () => {}
+  ).catch(err => { showToast('Camera error: ' + err, 'error'); stopCamera(); });
+}
+function stopCamera() {
+  if (_qrScanner) { _qrScanner.stop().catch(() => {}).finally(() => { _qrScanner = null; }); }
+  const modal = document.getElementById('cameraModal');
+  if (modal) modal.classList.remove('open');
+}
+
+// Global unhandled promise rejection handler
+window.addEventListener('unhandledrejection', function(e){
+  console.error('Unhandled promise rejection:', e.reason);
+});
+
+// Enter key on login form
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement?.closest?.('#loginBox')) login();
+});
+
+</script>
 <script>
 (function(){
   const d=new Date();
@@ -903,7 +1031,7 @@ const CHARTOPTS=(extra={})=>({responsive:true,maintainAspectRatio:false,plugins:
 
 function loadStudentDashboard(targetUser,isParent){
   const user=targetUser||localStorage.getItem('user');
-  apiFetch('/student/data/'+user+'?t='+Date.now()).then(r=>r.json()).then(data=>{
+  apiFetch('/student/data/'+user+'?t='+Date.now()).then(r=>r.json()).then(data=>{ try {
     if(!data || !data.totals){ console.error('No data returned for student:', user, data); return; }
     const{attended,totals,messages}=data;
     const subs=Object.keys(totals);
@@ -951,12 +1079,13 @@ function loadStudentDashboard(targetUser,isParent){
         pa.innerHTML='<div class="empty"><i class="fas fa-check-circle"></i>No alerts for your child</div>';
       }
     }
-  });
+  } catch(e){ console.error("Student dash error:",e); }
+  }).catch(e=>{ console.error("Student data fetch failed:",e); });
 }
 
 let adminData=[];
 function loadAdminDashboard(){
-  apiFetch('/admin/stats').then(r=>r.json()).then(d=>{
+  apiFetch('/admin/stats').then(r=>r.json()).then(d=>{ try {
     document.getElementById('adminStatCards').innerHTML=
       sc('👥','Total Users',d.users,'registered accounts','rgba(79,142,247,.12)')+
       sc('✅','Attendance Records',d.attendance,'entries logged','rgba(34,197,94,.12)')+
@@ -1780,14 +1909,16 @@ function toggleTheme() {
 
 // apiFetch and logout defined in script.js
 
-document.addEventListener("DOMContentLoaded", function init(){
+// Safe init — runs after DOM ready, works even if event already fired
+function runInit() {
   const user=localStorage.getItem('user');
   const role=localStorage.getItem('role');
   const tok=localStorage.getItem('token');
   const ud=JSON.parse(localStorage.getItem('userData')||'{}');
   if(!user){
     // Not logged in — redirect to login
-    setTimeout(()=>{ location.href='/'; }, 500);
+    if(typeof _loadTimeout !== 'undefined') clearTimeout(_loadTimeout);
+    window.location.href = '/';
     return;
   }
   // Hide any loading spinners
@@ -1807,6 +1938,8 @@ document.addEventListener("DOMContentLoaded", function init(){
   document.getElementById('sidebarRole').textContent=role;
   document.getElementById('avatarInitial').textContent=(ud.full_name||user).charAt(0).toUpperCase();
   document.getElementById('pageSubtitle').textContent='Welcome back, '+(ud.full_name||user);
+  // Clear safety timeout and hide loading screen
+  if(typeof _loadTimeout !== 'undefined') clearTimeout(_loadTimeout);
   const loadScr=document.getElementById('loadingScreen');
   if(loadScr) loadScr.style.display='none';
   const sec=document.getElementById('sec-'+role);
@@ -1835,7 +1968,13 @@ document.addEventListener("DOMContentLoaded", function init(){
     else{document.getElementById('parentChildInfo').innerHTML='<span style="color:var(--red)">No child linked.</span>';}
   }
   else if(role==='admin'){loadAdminDashboard();}
-});
+}
+// Run immediately if DOM ready, else wait for event
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', runInit);
+} else {
+  runInit();
+}
 
 
 function openCorrectionModal(){document.getElementById('correctionModal').classList.add('open');}
