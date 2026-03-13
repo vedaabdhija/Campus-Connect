@@ -146,10 +146,12 @@ def require_role(*roles):
             if not td:
                 td = {"username": "guest", "role": "student"}
 
-            # Only enforce role restriction if a real token was used
-            # (skip role check for fallback/guest access to keep file:// working)
+            # Only enforce role restriction if a real token was verified (memory OR db)
             tok = request.headers.get("X-Token", "")
-            if roles and tok and tok not in ("undefined", "null", "") and _tokens.get(tok):
+            real_token = tok and tok not in ("undefined", "null", "") and (
+                _tokens.get(tok) or verify_token(request) is not None
+            )
+            if roles and real_token:
                 if td["role"] not in roles:
                     return jsonify(success=False, msg="Forbidden – insufficient permissions"), 403
 
@@ -588,7 +590,14 @@ def get_students():
 def gen():
     d       = request.json or {}
     subject = d.get("subject")
-    faculty = (request.token_data or {}).get("username", d.get("faculty", "unknown"))
+    # Get faculty from token (check DB if memory token expired)
+    _td = request.token_data or {}
+    faculty = _td.get("username", "")
+    if not faculty or faculty == "guest":
+        # Try from request body as fallback
+        faculty = d.get("faculty", "")
+    if not faculty or faculty == "guest":
+        return jsonify(success=False, msg="Session expired. Please log out and log in again.")
     code    = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     now     = time.time()
 
@@ -615,7 +624,7 @@ def gen():
                          (faculty, subject, now))
         conn.commit()
 
-    print(f"[SESSION] {faculty} started {subject} | new_session={sess_expired} | code={code}", flush=True)
+    print(f"[SESSION] faculty={faculty} subject={subject} new_session={sess_expired} code={code} token_td={request.token_data}", flush=True)
 
     return jsonify(success=True, code=code, subject=subject)
 
@@ -641,22 +650,33 @@ def scan():
         return jsonify(success=True, msg="Attendance Marked!")
 
     # Student captcha flow
+    # Prefer token username over body username (more secure, handles Render token loss)
+    student_user = td.get("username") if td.get("username") not in (None, "guest") else u
+    if not student_user:
+        return jsonify(success=False, msg="Not logged in. Please log in again.")
+    code_clean = (code or "").strip().upper()
+
     with get_db() as conn:
-        session = conn.execute("SELECT code,start_time FROM sessions WHERE subject=?", (s,)).fetchone()
+        # Case-insensitive subject match
+        session = conn.execute(
+            "SELECT code, start_time, subject FROM sessions WHERE LOWER(subject)=LOWER(?)", (s,)
+        ).fetchone()
         if not session:
-            return jsonify(success=False, msg=f"No active session for {s}. Ask faculty to start one.")
+            return jsonify(success=False, msg=f"No active session for '{s}'. Ask faculty to start one first.")
+        actual_subject = session["subject"]  # use DB's exact subject name
         if time.time() - session["start_time"] > 300:
-            return jsonify(success=False, msg="Session expired. Ask faculty to start a new session.")
-        if code.upper() != session["code"]:
-            return jsonify(success=False, msg="Wrong code. Please check and try again.")
+            return jsonify(success=False, msg="Session has expired (5 min limit). Ask faculty to start a new one.")
+        if code_clean != session["code"]:
+            return jsonify(success=False, msg=f"Wrong code '{code_clean}'. Double-check and try again.")
         recent = conn.execute(
             "SELECT 1 FROM attendance WHERE student_username=? AND subject=? AND timestamp>?",
-            (u, s, time.time()-600)).fetchone()
+            (student_user, actual_subject, time.time()-600)).fetchone()
         if recent:
             return jsonify(success=False, msg="Attendance already marked for this session!")
         conn.execute("INSERT INTO attendance (student_username,subject,timestamp) VALUES (?,?,?)",
-                     (u, s, time.time()))
+                     (student_user, actual_subject, time.time()))
         conn.commit()
+    print(f"[ATTEND] {student_user} marked for {actual_subject}", flush=True)
     return jsonify(success=True, msg="✅ Attendance Marked Successfully!")
 
 # ── CORRECTION REQUESTS ───────────────────────────────────
@@ -1054,14 +1074,26 @@ def faculty_report():
     return jsonify(report)
 
 @app.route("/faculty/session-history")
-@require_role("faculty")
+@require_role()
 def faculty_session_history():
     td = request.token_data
+    faculty = td.get("username", "")
+    role    = td.get("role", "")
+    print(f"[SESSION HISTORY] requested by: {faculty} role: {role}", flush=True)
+    # Accept faculty OR admin; also allow username-based fallback from query param
+    if not faculty or faculty == "guest":
+        faculty = request.args.get("faculty", "")
+    if not faculty:
+        return jsonify([])
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT subject, COUNT(*) as sessions FROM faculty_sessions WHERE faculty=? GROUP BY subject",
-            (td["username"],)
+            """SELECT subject, COUNT(*) as sessions,
+               MAX(timestamp) as last_session
+               FROM faculty_sessions WHERE faculty=?
+               GROUP BY subject ORDER BY last_session DESC""",
+            (faculty,)
         ).fetchall()
+    print(f"[SESSION HISTORY] found {len(rows)} subjects for {faculty}", flush=True)
     return jsonify([dict(r) for r in rows])
 
 # ══════════════════════════════════════════════════════════

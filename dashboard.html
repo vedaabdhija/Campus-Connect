@@ -1152,7 +1152,7 @@ function generateQR(){
   if(!subjEl || !subjEl.value){ showToast('No subject selected','danger'); return; }
   const subj = subjEl.value;
 
-  apiFetch('/generate-qr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:subj})})
+  apiFetch('/generate-qr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:subj,faculty:localStorage.getItem('user')})})
   .then(r=>r.json())
   .then(d=>{
     if(!d.success){ showToast(d.msg||'Failed to start session','danger'); return; }
@@ -1248,7 +1248,7 @@ window.submitCode = function(scannedText) {
   }
 
   if (!code) { showToast('Enter the captcha code first', 'danger'); return; }
-  if (!subj) { showToast('Select a subject first', 'danger'); return; }
+  if (!subj) { showToast('Select a subject first — if dropdown is empty, no sessions have been started yet', 'danger'); return; }
   if (!user) { showToast('Not logged in', 'danger'); return; }
 
   if (res) res.innerHTML = `<div class="alert-item info" style="margin-top:6px"><i class="fas fa-spinner fa-spin"></i><span>Submitting...</span></div>`;
@@ -1256,7 +1256,7 @@ window.submitCode = function(scannedText) {
   apiFetch('/scan-qr', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ username: user, subject: subj, code: code })
+    body: JSON.stringify({ username: user, subject: subj, code: code, faculty: user })
   })
   .then(r => r.json())
   .then(d => {
@@ -2003,9 +2003,21 @@ function handleCorrection(rid,action){
 
 function loadFacultySessionHistory(){
   const el=document.getElementById('facultySessionHistory'); if(!el)return;
-  apiFetch('/faculty/session-history').then(r=>r.json()).then(d=>{
-    if(!d.length){el.innerHTML='<div class="empty">No sessions conducted yet</div>';return;}
-    el.innerHTML='<table><thead><tr><th>Subject</th><th>Sessions Conducted</th></tr></thead><tbody>'+d.map(r=>`<tr><td>${r.subject}</td><td><strong>${r.sessions}</strong></td></tr>`).join('')+'</tbody></table>';
+  apiFetch('/faculty/session-history?faculty='+encodeURIComponent(localStorage.getItem('user')||'')).then(r=>r.json()).then(d=>{
+    if(!Array.isArray(d) || !d.length){el.innerHTML='<div class="empty"><i class="fas fa-calendar-times" style="font-size:2em;color:var(--muted);display:block;margin-bottom:8px"></i>No sessions conducted yet. Start a session using the QR generator above.</div>';return;}
+    el.innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr>'
+      +'<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);color:var(--muted)">Subject</th>'
+      +'<th style="text-align:center;padding:8px;border-bottom:1px solid var(--border);color:var(--muted)">Sessions</th>'
+      +'<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border);color:var(--muted)">Last Held</th>'
+      +'</tr></thead><tbody>'
+      +d.map(r=>{
+        const dt=r.last_session?new Date(r.last_session*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';
+        return `<tr>
+          <td style="padding:8px;border-bottom:1px solid var(--border)">${r.subject}</td>
+          <td style="text-align:center;padding:8px;border-bottom:1px solid var(--border)"><strong style="color:var(--primary)">${r.sessions}</strong></td>
+          <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);color:var(--muted);font-size:12px">${dt}</td>
+        </tr>`;
+      }).join('')+'</tbody></table>';
   });
 }
 
