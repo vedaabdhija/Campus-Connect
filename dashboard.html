@@ -468,21 +468,6 @@ setTimeout(function(){
           </div>
         </div>
       </div>
-      <!-- AI ASSISTANT -->
-      <div class="card" style="margin-top:0;border:1px solid rgba(79,142,247,.3);background:linear-gradient(135deg,rgba(79,142,247,.05),rgba(139,92,246,.05))">
-        <div class="card-title" style="color:var(--primary)"><i class="fas fa-robot"></i>AI Attendance Assistant <span style="font-size:10px;background:rgba(79,142,247,.2);color:var(--primary);padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:600">BETA</span></div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Ask anything about your attendance — how many classes you can miss, which subject needs attention, predictions, and more.</p>
-        <div id="aiChatHistory" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-        <div style="display:flex;gap:8px">
-          <input class="ifield" id="aiChatInput" placeholder="e.g. How many ML classes can I miss?" style="flex:1" onkeydown="if(event.key==='Enter')sendAiMessage()">
-          <button class="btn btn-primary" onclick="sendAiMessage()" id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
-        </div>
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('aiChatInput').value='What is my overall attendance?';sendAiMessage()">Overall %</button>
-          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('aiChatInput').value='Which subject needs the most attention?';sendAiMessage()">Weakest subject</button>
-          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('aiChatInput').value='How many more classes can I miss and stay above 75%?';sendAiMessage()">Classes I can miss</button>
-        </div>
-      </div>
       <!-- NOTES SECTION -->
       <div class="card" style="margin-top:0">
         <div class="card-title"><i class="fas fa-folder-open"></i>Study Notes &amp; Resources</div>
@@ -548,13 +533,6 @@ setTimeout(function(){
           <div class="card-title"><i class="fas fa-check-square"></i>Attendance Correction Requests</div>
           <div id="correctionList"><div class="empty"><i class="fas fa-spinner fa-spin"></i>Loading...</div></div>
         </div>
-      </div>
-      <!-- AI AT-RISK -->
-      <div class="card" style="margin-top:0;border:1px solid rgba(239,68,68,.25);background:linear-gradient(135deg,rgba(239,68,68,.04),rgba(245,158,11,.04))">
-        <div class="card-title" style="color:#ef4444"><i class="fas fa-robot"></i>AI At-Risk Scanner <span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;padding:2px 8px;border-radius:10px;margin-left:6px">BETA</span></div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">AI analyses all students and generates personalised alert messages for those below 75%.</p>
-        <button class="btn btn-danger btn-full" onclick="runAiAtRisk()" id="atRiskBtn"><i class="fas fa-search"></i>Scan for At-Risk Students</button>
-        <div id="atRiskResults" style="margin-top:12px"></div>
       </div>
       <!-- NOTES -->
       <div class="card" style="margin-top:0">
