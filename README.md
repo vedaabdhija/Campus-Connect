@@ -150,6 +150,13 @@ python app.py
 
 Open the local address provided by Flask in your browser.
 
+## 🔐 Demo Login
+
+A demo account is available for project evaluation.
+
+**Username:** Provided upon request  
+**Password:** Provided upon request
+
 ## 🎯 Project Objective
 
 The objective of Campus-Connect is to provide a centralized digital platform for managing student attendance and related academic workflows.
